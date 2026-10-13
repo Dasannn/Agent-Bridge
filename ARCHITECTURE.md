@@ -88,11 +88,12 @@ interface LoginProvider {
   input?: string[];                   // keystrokes to pick the provider, if needed
   strategy: StrategyId;
   parsePrompt(output: string): LoginPrompt | undefined;
-  delegation: {
-    example: string;                  // non-interactive invocation, for the skill
-  };
 }
 ```
+
+A single-provider CLI such as Antigravity has one provider with id
+`default`, and `--provider` may be omitted for it. Session state and the
+session socket are keyed by agent and provider.
 
 `LoginPrompt` contains the URL to open, an optional device code, and, for the
 loopback strategy, the expected callback port.
@@ -120,9 +121,9 @@ runner, a small Node.js process that:
    CLIs require a TTY.
 2. Buffers its output until the adapter's `parsePrompt` finds a prompt, or a
    timeout expires.
-3. Writes non-secret session state to `<state>/sessions/<agent>.json` (runner
+3. Writes non-secret session state to `<state>/sessions/<agent>-<provider>.json` (runner
    pid, strategy, prompt URL, callback port, start time, status).
-4. Listens on a Unix domain socket `<state>/sessions/<agent>.sock` for the
+4. Listens on a Unix domain socket `<state>/sessions/<agent>-<provider>.sock` for the
    `complete` request.
 5. On a `complete` request, applies the strategy, waits for the CLI to exit,
    reports the result over the socket, and removes its state files.

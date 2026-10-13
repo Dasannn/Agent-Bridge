@@ -50,16 +50,24 @@ Answers plan question 9.
 
 ### Task 0.2: OpenCode
 
-Answers plan questions 1–5 for OpenCode. Requires the project owner to log
-in.
+Answers plan questions 1–5 for OpenCode. OpenCode is multi-provider: v1
+targets free models (no login) and the ChatGPT and GitHub Copilot
+subscription providers. The project owner does not use those subscriptions,
+so their real login is verified by a volunteer or at the release checklist;
+until then, record the flow from the CLI's output.
+
+Requires network access to `opencode.ai`, `models.opencode.ai`, `models.dev`,
+and, for the providers, `auth.openai.com` and `github.com`.
 
 - [ ] Install OpenCode with its official method; record the command and the
       binary name.
 - [ ] Find its login command and run it in a pseudo-terminal (for example
       `script -qfc "<command>" /dev/null`); save the full output, masked, to
       `.agent/spike/opencode-login.txt`.
-- [ ] Identify the flow: device code, paste code, or loopback callback (with
-      its port).
+- [ ] Confirm that a free model runs with no login.
+- [ ] For each of ChatGPT and GitHub Copilot, identify the flow (device code,
+      paste code, or loopback callback with its port) and the keystrokes that
+      select the provider in the login picker.
 - [ ] Relay the URL to the project owner, collect the pasted response, and
       complete the login using that flow. Record every step that was needed.
 - [ ] Find a command or file check that reports whether OpenCode is
@@ -68,7 +76,8 @@ in.
 - [ ] Find the non-interactive invocation for a delegated task, run one small
       task, and record how output and exit code behave.
 - [ ] Check whether OpenCode reads `AGENTS.md` from the working directory.
-- [ ] Note any provider terms relevant to this use.
+- [ ] Note the terms of OpenAI and GitHub on using their subscriptions
+      through OpenCode.
 - [ ] Write `docs/decisions/0002-opencode.md` and commit it.
 
 ### Task 0.3: Antigravity (`agy`)
