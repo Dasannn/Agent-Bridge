@@ -74,12 +74,20 @@ interface Adapter {
   binaries: string[];                 // commands to allow, e.g. ["opencode"]
   isInstalled(): Promise<boolean>;
   install(): Promise<void>;
-  isAuthenticated(): Promise<boolean>;
-  login: {
-    command: string[];                // e.g. ["opencode", "auth", "login"]
-    strategy: StrategyId;
-    parsePrompt(output: string): LoginPrompt | undefined;
+  requiresLogin: boolean;             // false when usable without login
+  providers: LoginProvider[];         // one entry for single-provider CLIs
+  delegation: {
+    example: string;                  // non-interactive invocation, for the skill
   };
+}
+
+interface LoginProvider {
+  id: string;                         // "default", "openai", "github-copilot"
+  isAuthenticated(): Promise<boolean>;
+  command: string[];                  // login command for this provider
+  input?: string[];                   // keystrokes to pick the provider, if needed
+  strategy: StrategyId;
+  parsePrompt(output: string): LoginPrompt | undefined;
   delegation: {
     example: string;                  // non-interactive invocation, for the skill
   };

@@ -83,12 +83,17 @@ Agent-Bridge is distributed as an npm package that provides the command
 
 `bridge status [agent]` reports, for each supported CLI (or the one given),
 whether it is installed and whether it is authenticated, and whether a login
-is in progress.
+is in progress. For a multi-provider CLI it reports each connected provider.
+A CLI that can be used without logging in (for example OpenCode's free
+models) is reported as ready once installed.
 
 ### FR-4 `login`
 
-`bridge login <agent>`:
+`bridge login <agent> [--provider <id>]`:
 
+- `--provider` selects the provider for multi-provider CLIs such as OpenCode,
+  and is required for them. For OpenCode, v1 supports the subscription
+  providers ChatGPT (OpenAI) and GitHub Copilot, subject to the spike.
 - Installs the CLI if missing.
 - If the CLI is already authenticated, says so and exits successfully without
   starting a new login.
@@ -170,6 +175,9 @@ Without a defined workflow, delegation proceeds normally.
   masked in any error output.
 - Agent-Bridge stores its own state outside the user's repository and never
   writes files into the repository.
+- Agent-Bridge never asks for, accepts, or relays API keys through the chat.
+  API keys belong in the cloud environment's secrets or environment
+  variables, and the skill tells the primary agent never to request them.
 - Permission rules granted by `setup` are limited to Agent-Bridge and the
   binaries of the listed CLIs.
 
