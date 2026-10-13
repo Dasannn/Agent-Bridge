@@ -40,7 +40,9 @@ Answers required:
 7. Where Claude Code and Codex load user skills from, whether one `SKILL.md`
    serves both, and whether a skill installed by an environment setup script
    is visible to the session.
-8. Whether the npm package name `agent-bridge` is available.
+8. The current permission rule syntax for Claude Code, whether user-level
+   settings apply in cloud sessions, and how Codex handles command approvals.
+9. Whether the npm package name `agent-bridge` is available.
 
 Output: one decision record per topic in `docs/decisions/`, plus recorded CLI
 output saved as test fixtures once the project is scaffolded.
@@ -86,11 +88,12 @@ login of each CLI succeeds in a cloud session.
 ### Phase 4 — Skill and setup
 
 Write `skill/SKILL.md`, generate its delegation examples from the adapters at
-build time, and implement `bridge setup` to install the CLIs and the skill.
+build time, and implement `bridge setup` to install the CLIs and the skill
+and to grant the agent permission to run them.
 
 Exit criteria: in a fresh cloud session whose setup script runs
 `npx -y github:dasannn/agent-bridge setup --agents opencode,agy`, the skill is
-loaded and the primary agent can authenticate and delegate to both CLIs on
+loaded, no permission prompts appear, and the primary agent can authenticate and delegate to both CLIs on
 request, following a project's SDD workflow when one exists.
 
 ### Phase 5 — Release

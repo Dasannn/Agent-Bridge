@@ -42,6 +42,7 @@ src/
 │   ├── session.ts   Session runner and session state
 │   ├── strategies/  Login strategies (only those used by v1 adapters)
 │   ├── output.ts    Text and JSON output, secret masking
+│   ├── permissions.ts  Allow rules merged into agent settings
 │   └── paths.ts     State and skill locations
 ├── adapters/
 │   ├── opencode.ts
@@ -70,6 +71,7 @@ registered in a static registry in `core/adapter.ts`.
 interface Adapter {
   id: string;                         // "opencode", "agy"
   displayName: string;
+  binaries: string[];                 // commands to allow, e.g. ["opencode"]
   isInstalled(): Promise<boolean>;
   install(): Promise<void>;
   isAuthenticated(): Promise<boolean>;
@@ -126,6 +128,16 @@ Starting a new login for an agent stops any existing runner for it first.
 
 The choice of pseudo-terminal implementation is settled by the spike, with a
 preference for one that does not require native compilation.
+
+### Permissions (`src/core/permissions.ts`)
+
+`setup` builds allow rules for `agent-bridge`, `bridge`, and each listed
+adapter's `binaries`, and merges them into the agent's user-level settings
+file (for Claude Code, `~/.claude/settings.json`). The merge reads the
+existing JSON, adds only missing rules, preserves every other key, and writes
+the file atomically. If the file cannot be parsed, it is left untouched and
+`setup` reports the error. The rule syntax and the Codex equivalent are
+settled by the spike.
 
 ### Output (`src/core/output.ts`)
 

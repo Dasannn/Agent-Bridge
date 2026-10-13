@@ -70,6 +70,11 @@ Agent-Bridge is distributed as an npm package that provides the command
 
 - Installs each listed CLI if it is not already installed.
 - Installs the Agent-Bridge skill where the primary agent loads skills.
+- Grants the primary agent permission to run Agent-Bridge and each listed CLI
+  without prompting, by adding allow rules to the agent's user-level settings
+  (for Claude Code, `~/.claude/settings.json`). Existing settings are
+  preserved, the granted rules are listed in the output, and
+  `--no-permissions` skips this step.
 - Is safe to run repeatedly and suitable for an environment setup script.
 - Reports, per CLI, whether it succeeded, and exits non-zero if any step
   failed.
@@ -165,6 +170,8 @@ Without a defined workflow, delegation proceeds normally.
   masked in any error output.
 - Agent-Bridge stores its own state outside the user's repository and never
   writes files into the repository.
+- Permission rules granted by `setup` are limited to Agent-Bridge and the
+  binaries of the listed CLIs.
 
 ## Acceptance Criteria
 
@@ -189,4 +196,6 @@ These are resolved by the initial spike and recorded in `docs/decisions/`:
 4. Whether each CLI reads `AGENTS.md` natively.
 5. Where Codex loads skills from, and whether one `SKILL.md` serves both
    Claude Code and Codex.
-6. Whether the npm package name `agent-bridge` is available.
+6. The current permission rule syntax, whether user-level settings apply in
+   cloud sessions, and how Codex handles command approvals.
+7. Whether the npm package name `agent-bridge` is available.
