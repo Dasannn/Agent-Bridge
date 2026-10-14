@@ -1,4 +1,5 @@
 import type { Adapter } from "../core/adapter.js";
+import { agy } from "./agy.js";
 
-/** Built-in adapters. Filled in Phase 3. */
-export const adapters: Adapter[] = [];
+/** Built-in adapters. */
+export const adapters: Adapter[] = [agy];
