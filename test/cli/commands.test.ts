@@ -23,6 +23,7 @@ const nodeAdapter: Adapter = {
   isInstalled: async () => true,
   install: async () => {},
   delegationExample: "node -e ...",
+  models: { list: "none", model: "none", effort: "none" },
 };
 const claudeAdapter: Adapter = { ...nodeAdapter, id: "claude", displayName: "Claude Code" };
 const missingAdapter: Adapter = {

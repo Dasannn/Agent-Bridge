@@ -28,6 +28,11 @@ export const claude: Adapter = {
   isInstalled: async (env) => findBinary("claude", env) !== undefined,
   install: (env) => npmInstall("@anthropic-ai/claude-code", env),
   delegationExample: 'bridge run claude -- -p "<task>" --output-format json',
+  models: {
+    list: "aliases such as `opus`, `sonnet`, and `haiku`, or a full model name",
+    model: "`--model <alias or name>`",
+    effort: "`--effort <level>`",
+  },
   providers: [
     {
       id: "default",

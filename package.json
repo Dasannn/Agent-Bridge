@@ -16,7 +16,7 @@
     "skill"
   ],
   "scripts": {
-    "build": "tsc -p .",
+    "build": "tsc -p . && node dist/tools/sync-skill.js",
     "prepare": "tsc -p .",
     "typecheck": "tsc -p . --noEmit",
     "lint": "biome check .",

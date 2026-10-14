@@ -126,6 +126,11 @@ export const agy: Adapter = {
   install,
   delegationExample:
     'bridge run agy -- -p "<task>" --output-format json --dangerously-skip-permissions',
+  models: {
+    list: "`bridge run agy -- models`",
+    model: "`--model <name>`",
+    effort: "`--effort low|medium|high|xhigh|max`",
+  },
   providers: [
     {
       id: "default",

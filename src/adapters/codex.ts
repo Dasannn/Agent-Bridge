@@ -31,6 +31,11 @@ export const codex: Adapter = {
   isInstalled: async (env) => findBinary("codex", env) !== undefined,
   install: (env) => npmInstall("@openai/codex", env),
   delegationExample: 'bridge run codex -- exec "<task>" --json --skip-git-repo-check',
+  models: {
+    list: "`bridge run codex -- debug models` (JSON: each `slug` and its `supported_reasoning_levels`)",
+    model: "`exec -m <slug>`",
+    effort: '`exec -c model_reasoning_effort="<level>"`',
+  },
   providers: [
     {
       id: "default",

@@ -68,6 +68,12 @@ export const opencode: Adapter = {
   isInstalled: async (env) => findBinary("opencode", env) !== undefined,
   install: (env) => npmInstall("opencode-ai", env),
   delegationExample: 'bridge run opencode -- run "<task>" --format json',
+  models: {
+    list: "`bridge run opencode -- models [provider] --verbose`; free models are `opencode/*`, and `--verbose` shows each model's variants",
+    model: "`run -m <provider>/<model>`",
+    effort:
+      "`run --variant <variant>`, one of the model's variants (models without variants ignore it)",
+  },
   providers: [
     provider("openai", "OpenAI", {
       keys: [

@@ -44,6 +44,7 @@ export const adapters = [
     isInstalled: async () => true,
     install: async () => {},
     delegationExample: "fake run",
+    models: { list: "fake models", model: "--model", effort: "--effort" },
     providers: [
       provider("paste", "paste-code", "paste-code", pastePrompt),
       provider("device", "device-code", "device-code", devicePrompt),

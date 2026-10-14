@@ -51,6 +51,8 @@ export interface Adapter {
   install(env: NodeJS.ProcessEnv): Promise<void>;
   /** Non-interactive invocation shown in the skill. */
   delegationExample: string;
+  /** How to list models and choose the model and reasoning effort (decision 0010). */
+  models: { list: string; model: string; effort: string };
 }
 
 export interface Registry {
