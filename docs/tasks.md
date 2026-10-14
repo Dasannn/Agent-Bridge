@@ -36,8 +36,9 @@ Global constraints for this phase:
 - All CLI processes Agent-Bridge starts receive the environment from
   `managedEnv` (Task 2.2). Nothing reads `process.env` directly except
   `src/cli/bin.ts`, which passes it down.
-- No secret (pasted response, token) is ever written to state files or logs;
-  every rendered message passes through `mask` (Task 2.1).
+- No secret (pasted response, token) is ever written to state files or logs.
+  Rendered results mask their declared `secrets`, and raw CLI output passes
+  through `mask` before it is shown (Task 2.1).
 - Tests never touch the real home directory: they set `AGENT_BRIDGE_HOME`
   and `HOME` to temporary directories.
 - Each task ends with `npm test`, `npm run typecheck`, and `npm run lint`
@@ -62,15 +63,16 @@ Review focus (inputs no single test exercises; reviewers check these):
 
 **Interfaces — Produces:**
 
-- `interface CommandResult { ok: boolean; message: string; data?: Record<string, unknown> }`
+- `interface CommandResult { ok: boolean; message: string; data?: Record<string, unknown>; secrets?: string[] }`
 - `render(result: CommandResult, json: boolean): string` — text mode
   returns `message` plus a newline; JSON mode returns
-  `JSON.stringify({ ok, message, ...data })` plus a newline. Output always
-  passes through `mask`.
+  `JSON.stringify({ ok, message, ...data })` plus a newline. Values in
+  `secrets` are replaced with `***`. URL parameters are not masked here,
+  because login URLs (for example Claude's `code=true`) must stay intact.
 - `mask(text: string, secrets?: string[]): string` — replaces each
   non-empty secret with `***`, and the values of URL query parameters
   `code`, `token`, `access_token`, `refresh_token`, `id_token`, and `state`
-  with `***`.
+  with `***`. Used for raw CLI output (screens, error text).
 
 - [ ] Tests: `masks listed secrets`; `masks code and state query
       parameters` (`https://x/cb?code=abc&state=def&scope=s` →
