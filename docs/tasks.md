@@ -354,8 +354,9 @@ on the web and in Codex Cloud by following the README alone.
 
 Global constraints for this phase:
 
-- The owner publishes to npm and merges to `main`. Agents prepare and
-  verify, but never publish or merge.
+- The owner authorised the agent to merge this work to `main` once Phase 5
+  is verified. Publishing to npm needs the owner's npm account, so the owner
+  runs `npm publish`.
 - No new features. Changes are limited to documentation, packaging, and the
   deferred minor findings chosen below.
 
@@ -363,13 +364,13 @@ Global constraints for this phase:
 
 **Files:** Modify `package.json`, `tsconfig.json`.
 
-- [ ] Version `0.1.0`, plus `repository`, `homepage`, `bugs`, `keywords`, and
+- [x] Version `0.1.0`, plus `repository`, `homepage`, `bugs`, `keywords`, and
       `author`.
-- [ ] Source maps: either stop emitting them or stop pointing them at
+- [x] Source maps: either stop emitting them or stop pointing them at
       unpublished `src/`.
-- [ ] `npm pack --dry-run` lists only `dist/`, `skill/`, `README.md`,
+- [x] `npm pack --dry-run` lists only `dist/`, `skill/`, `README.md`,
       `LICENSE`, and `package.json`. A test or CI step checks this.
-- [ ] Installing the packed tarball globally, in a temporary prefix, gives a
+- [x] Installing the packed tarball globally, in a temporary prefix, gives a
       working `bridge --version`, `bridge skill --print`, and `bridge setup`.
 
 ### Task 5.2: Deferred minor findings

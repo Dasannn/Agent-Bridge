@@ -1,8 +1,27 @@
 {
   "name": "cloud-agent-bridge",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Authenticate coding-agent CLIs inside cloud agent sessions and delegate tasks to them.",
+  "keywords": [
+    "claude-code",
+    "codex",
+    "opencode",
+    "antigravity",
+    "agents",
+    "cli",
+    "delegation",
+    "cloud"
+  ],
+  "homepage": "https://github.com/Dasannn/Agent-Bridge#readme",
+  "bugs": {
+    "url": "https://github.com/Dasannn/Agent-Bridge/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dasannn/Agent-Bridge.git"
+  },
   "license": "MIT",
+  "author": "Dasannn",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -12,12 +31,14 @@
     "bridge": "dist/cli/bin.js"
   },
   "files": [
-    "dist",
+    "dist/adapters",
+    "dist/cli",
+    "dist/core",
     "skill"
   ],
   "scripts": {
-    "build": "tsc -p . && node dist/tools/sync-skill.js",
-    "prepare": "tsc -p .",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p . && node dist/tools/sync-skill.js",
+    "prepare": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p .",
     "typecheck": "tsc -p . --noEmit",
     "lint": "biome check .",
     "test": "vitest run"
