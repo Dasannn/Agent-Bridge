@@ -424,13 +424,14 @@ Fix with tests, or record why not:
 
 **Files:** Create `docs/guides/release.md`.
 
-- [ ] Steps before publishing:
+- [x] Steps before publishing:
   - green CI;
   - `npm pack` check;
   - version bump;
   - changelog notes in the GitHub release.
-- [ ] Owner steps: merge to `main`, `npm publish`, and a Git tag.
-- [ ] Manual end-to-end check after publishing, following only the README:
+- [x] Owner steps: npm account and the `NPM_TOKEN` secret. Publishing is a
+      `v*` tag on `main`, which runs `.github/workflows/publish.yml`.
+- [x] Manual end-to-end check after publishing, following only the README:
   - a fresh Claude Code on the web session and a fresh Codex Cloud task;
   - one login and one delegation each;
   - a committed repository skill loading in a new Codex Cloud task (spec
