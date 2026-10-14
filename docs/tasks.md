@@ -492,3 +492,8 @@ Goal: make the project easier to find, support, and release.
 
 - [x] Gather documented login, network, setup, account, and canary problems
       in `docs/guides/troubleshooting.md`.
+
+### Task 7.6: Verify the Codex Cloud repository skill
+
+- [x] Confirm that a committed repository skill loads at the start of a new
+      Codex Cloud task and can connect Antigravity on request (decision 0014).

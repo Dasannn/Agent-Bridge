@@ -278,11 +278,8 @@ Without a defined workflow, delegation proceeds normally.
 The Phase 0 spike answered the original open questions; see
 `docs/decisions/0001` to `0008`.
 
-Still open, to be verified after the first release
-(`docs/guides/release.md`):
-
-1. Whether a committed repository skill loads at the start of a Codex Cloud
-   task.
+No question remains open. A committed repository skill loads at the start
+of a Codex Cloud task, verified after release (decision 0014).
 
 Verified since: real logins and delegation for every supported CLI
 (decisions 0009 to 0011), and the Claude Code permission rule syntax
