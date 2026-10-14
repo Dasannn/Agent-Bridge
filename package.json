@@ -1,0 +1,29 @@
+{
+  "name": "cloud-agent-bridge",
+  "version": "0.0.0",
+  "description": "Authenticate coding-agent CLIs inside cloud agent sessions and delegate tasks to them.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "agent-bridge": "dist/cli/bin.js",
+    "bridge": "dist/cli/bin.js"
+  },
+  "files": [
+    "dist",
+    "skill"
+  ],
+  "scripts": {
+    "build": "tsc -p .",
+    "typecheck": "tsc -p . --noEmit",
+    "lint": "biome check .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "20.19.43",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}
