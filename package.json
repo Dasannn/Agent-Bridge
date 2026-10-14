@@ -2,6 +2,7 @@
   "name": "cloud-agent-bridge",
   "version": "0.0.0",
   "description": "Authenticate coding-agent CLIs inside cloud agent sessions and delegate tasks to them.",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=20"
