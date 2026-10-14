@@ -67,17 +67,19 @@ macOS or Linux is allowed but not a primary target.
 
 ### FR-1 Command
 
-Agent-Bridge is distributed as an npm package that provides the command
-`agent-bridge`, with the alias `bridge`.
+Agent-Bridge is distributed as the npm package `cloud-agent-bridge`, which
+provides the command `agent-bridge`, with the alias `bridge`.
 
 ### FR-2 `setup`
 
 `bridge setup --agents <list>` prepares a session:
 
 - Detects the host agent and skips it if it is listed.
-
 - Installs each listed CLI if it is not already installed.
-- Installs the Agent-Bridge skill where the primary agent loads skills.
+- Installs the Agent-Bridge skill where the primary agent loads user skills
+  (Claude Code: `~/.claude/skills/agent-bridge/`). Where user skills cannot
+  be installed (Codex Cloud), it skips this step and says how to use
+  `bridge skill` instead.
 - Grants the primary agent permission to run Agent-Bridge and each listed CLI
   without prompting, by adding allow rules to the agent's user-level settings
   (for Claude Code, `~/.claude/settings.json`). Existing settings are
@@ -86,6 +88,16 @@ Agent-Bridge is distributed as an npm package that provides the command
 - Is safe to run repeatedly and suitable for an environment setup script.
 - Reports, per CLI, whether it succeeded, and exits non-zero if any step
   failed.
+
+### FR-2a Portable home
+
+When the home directory is not writable (as in Codex Cloud tasks),
+Agent-Bridge uses a portable home: `AGENT_BRIDGE_HOME` if set, otherwise
+`/tmp/agent-bridge`. CLIs are installed under it, and every CLI process that
+Agent-Bridge starts runs with its home and configuration directories pointing
+inside it, so logins are stored there. When the home directory is writable,
+the portable home holds only Agent-Bridge's own state and CLIs use their
+normal locations.
 
 ### FR-3 `status`
 
@@ -132,14 +144,22 @@ logged out.
 
 `bridge complete <agent> [response]`:
 
-- Delivers the user's pasted response to the in-progress login, according to
-  that CLI's flow (typed code or loopback callback URL). For flows that need
-  no response, it waits for the login to finish.
+- Delivers the user's pasted response to the in-progress login as typed
+  input (paste-code flows). For device-code flows, which need no response,
+  it waits for the login to finish.
 - Validates the response before using it. Invalid input is rejected without
   cancelling the login, so the user can paste again.
 - Waits for the login to finish, with a timeout, and verifies the CLI is
   authenticated.
 - Reports success, or a specific failure with the next step to take.
+
+### FR-5a `run`
+
+`bridge run <agent> [--provider <id>] -- <args...>` runs the CLI with the
+given arguments in the environment Agent-Bridge manages (portable home and
+`PATH`), passes its standard input, output, and exit code through unchanged,
+and refuses the host agent. The skill uses `bridge run` for every delegation,
+so one skill works in every environment.
 
 ### FR-6 Skill
 
@@ -200,14 +220,12 @@ Without a defined workflow, delegation proceeds normally.
 | The CLI prints no URL or code within the timeout | Stop the login process and show the CLI's raw output |
 | `complete` with no login in progress, or the login process has exited | Explain this and say to run `bridge login <agent>` again |
 | Pasted response is empty or malformed | Reject it, keep the login running, explain what to paste |
-| Callback URL does not target the expected loopback host and port | Reject it without making any request |
 | Provider rejects or expires the code | Show the CLI's error and say to restart the login |
 | Provider host is unreachable | Say that the environment's network policy may need to allow it |
 
 ## Security Requirements
 
-- Pasted responses are sent only to the CLI's stdin or to its callback on the
-  container's loopback interface.
+- Pasted responses are sent only to the CLI's standard input.
 - Codes and tokens are never written to logs or to Agent-Bridge state, and are
   masked in any error output.
 - Agent-Bridge stores its own state outside the user's repository and never
@@ -231,17 +249,17 @@ Without a defined workflow, delegation proceeds normally.
 4. Every error case in the table above produces the required behavior.
 5. No secrets appear in Agent-Bridge's output, logs, or state files.
 
-## Open Questions
+## Decisions and Remaining Questions
 
-These are resolved by the initial spike and recorded in `docs/decisions/`:
+The Phase 0 spike answered the original open questions; see
+`docs/decisions/0001` to `0008`.
 
-1. Which login flow each supported CLI uses in a headless container, and
-   whether it can be driven as specified.
-2. How to check whether each CLI is authenticated.
-3. The non-interactive invocation of each CLI for delegation.
-4. Whether each CLI reads `AGENTS.md` natively.
-5. Where Codex loads skills from, and whether one `SKILL.md` serves both
-   Claude Code and Codex.
-6. The current permission rule syntax, whether user-level settings apply in
-   cloud sessions, and how Codex handles command approvals.
-7. Whether the npm package name `agent-bridge` is available.
+Still open, to be verified in the phase that needs them:
+
+1. Real login and delegation for Codex, Claude Code, and OpenCode's ChatGPT
+   provider (Phase 3, by the owner or a volunteer with the subscription).
+2. The Claude Code permission rule syntax written by `setup` (Phase 4).
+3. Whether a committed repository skill loads at the start of a Codex Cloud
+   task (release checklist).
+4. Each CLI's behavior under the portable home's redirected variables
+   (Phase 3).

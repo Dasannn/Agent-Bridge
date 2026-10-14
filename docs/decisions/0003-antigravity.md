@@ -1,6 +1,6 @@
 # 0003: Antigravity CLI (`agy`)
 
-- Status: Accepted (terms-of-service risk to be reviewed by the project owner)
+- Status: Accepted
 - Date: 2026-10-14
 
 ## Context
@@ -78,9 +78,9 @@ Sources:
 
 ## Consequences
 
-- The README must list the required hosts and warn clearly about the
-  Antigravity terms-of-service risk; the project owner decides at the Phase 0
-  review whether v1 keeps the Antigravity adapter.
+- The project owner kept Antigravity in v1 at the Phase 0 review, on the
+  condition that the README warns clearly about the reported account
+  restrictions.
 - The skill should tell the primary agent that `agy` reads `AGENTS.md`, so it
   does not need to repeat project rules in the prompt, only point to them.
 - Because the installer edits shell profiles, `bridge setup` should call it

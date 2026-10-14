@@ -11,138 +11,94 @@ Requirements for every task:
 - Never commit or paste secrets. Mask codes, tokens, and `code`/`state` URL
   parameters in any saved output.
 
-## Phase 0 — Spike: verify the target CLIs
+## Phase 0 — Spike: complete
 
-No product code is written in this phase. Each task ends with a decision
-record in `docs/decisions/`, using this format:
+All Phase 0 questions are answered in `docs/decisions/0001` to `0008`, and
+the spec, architecture, and plan were updated at the Phase 0 review.
+Remaining verifications are listed at the end of `docs/spec.md`.
 
-```markdown
-# NNNN: <Title>
+## Phase 1 — Project scaffold
 
-- Status: Accepted | Blocked
-- Date: YYYY-MM-DD
+Goal: a buildable, linted, tested TypeScript package whose `bridge` command
+prints help and version, with CI running on every push and pull request.
 
-## Context
-<The question, from docs/plan.md Phase 0.>
+Global constraints for this phase:
 
-## Findings
-<What was tried and observed, with commands and masked output.>
+- Package name `cloud-agent-bridge`; commands `agent-bridge` and `bridge`.
+- Node.js 20 or later; TypeScript strict mode; ES modules.
+- Dev dependencies only: `typescript`, `@types/node`, `vitest`,
+  `@biomejs/biome`. No runtime dependencies yet.
+- Exact versions in `package.json` (no `^` or `~`), with `package-lock.json`
+  committed.
 
-## Decision
-<The answer the rest of the project relies on.>
+### Task 1.1: Package, tooling, and `bridge --help`
 
-## Consequences
-<What changes in the spec, architecture, or later tasks.>
-```
+**Files:**
 
-### Task 0.1: Spike workspace and package name
+- Create: `package.json`, `package-lock.json`, `tsconfig.json`,
+  `biome.json`, `vitest.config.ts`
+- Create: `src/cli/main.ts`, `src/cli/bin.ts`
+- Test: `test/cli/main.test.ts`
+- Modify: `.gitignore` (add `node_modules/`, `dist/`, `coverage/`)
 
-Answers plan question 9.
+**Interfaces:**
 
-- [ ] Add `.agent/` to `.gitignore`.
-- [ ] Record the container baseline: OS, `node --version`, `npm --version`,
-      and whether `npm` and GitHub are reachable through the network policy.
-- [ ] Run `npm view agent-bridge` and `npm view @dasannn/agent-bridge`, and
-      record which names are available.
-- [ ] Write `docs/decisions/0001-package-name-and-baseline.md` with the
-      chosen package name.
-- [ ] Commit `.gitignore` and the decision record.
+- Produces:
+  `main(argv: string[], io?: { stdout(text: string): void; stderr(text: string): void }): Promise<number>`
+  in `src/cli/main.ts`, returning the process exit code. Later phases add
+  commands to it. `src/cli/bin.ts` calls
+  `main(process.argv.slice(2))` and sets `process.exitCode`.
 
-### Task 0.2: OpenCode
+- [ ] **Step 1: Create the package and tooling.**
+      `package.json`: `"type": "module"`, `"engines": { "node": ">=20" }`,
+      `"bin": { "agent-bridge": "dist/cli/bin.js", "bridge": "dist/cli/bin.js" }`,
+      `"files": ["dist", "skill"]`, and scripts `build` (`tsc -p .`),
+      `typecheck` (`tsc -p . --noEmit`), `lint` (`biome check .`), `test`
+      (`vitest run`). `tsconfig.json`: `strict`, `module` and
+      `moduleResolution` `NodeNext`, `target` `ES2022`, `outDir` `dist`,
+      `rootDir` `src`.
+- [ ] **Step 2: Write the failing tests** in `test/cli/main.test.ts`:
+  - `prints help for --help`: `main(["--help"], io)` resolves `0`; stdout
+    contains `Usage: bridge <command>` and lists `setup`, `status`, `login`,
+    `complete`, `logout`, `run`, and `skill`.
+  - `prints help with no arguments`: same as above for `main([], io)`.
+  - `prints the package version for --version`: resolves `0`; stdout is the
+    `version` from `package.json` followed by a newline.
+  - `rejects unknown commands`: `main(["nope"], io)` resolves `1`; stderr
+    contains `Unknown command: nope` and `bridge --help`.
+- [ ] **Step 3: Run** `npm test`. Expected: the four tests fail because
+      `main` does not exist.
+- [ ] **Step 4: Implement** `main` and `bin.ts`. Help text lists the seven
+      commands with one-line descriptions taken from `docs/spec.md`. Commands
+      other than help and version are not implemented in this phase and are
+      not dispatched yet. Read the version from `package.json` at runtime.
+- [ ] **Step 5: Run** `npm test`, `npm run typecheck`, and `npm run lint`.
+      Expected: all pass.
+- [ ] **Step 6: Run** `npm run build && node dist/cli/bin.js --help`.
+      Expected: the help text, exit code `0`.
+- [ ] **Step 7: Commit.**
 
-Answers plan questions 1–5 for OpenCode. OpenCode is multi-provider: v1
-targets free models (no login) and the ChatGPT and GitHub Copilot
-subscription providers. The project owner does not use those subscriptions,
-so their real login is verified by a volunteer or at the release checklist;
-until then, record the flow from the CLI's output.
+### Task 1.2: Continuous integration
 
-Requires network access to `opencode.ai`, `models.opencode.ai`, `models.dev`,
-and, for the providers, `auth.openai.com` and `github.com`.
+**Files:**
 
-- [ ] Install OpenCode with its official method; record the command and the
-      binary name.
-- [ ] Find its login command and run it in a pseudo-terminal (for example
-      `script -qfc "<command>" /dev/null`); save the full output, masked, to
-      `.agent/spike/opencode-login.txt`.
-- [ ] Confirm that a free model runs with no login.
-- [ ] For each of ChatGPT and GitHub Copilot, identify the flow (device code,
-      paste code, or loopback callback with its port) and the keystrokes that
-      select the provider in the login picker.
-- [ ] Relay the URL to the project owner, collect the pasted response, and
-      complete the login using that flow. Record every step that was needed.
-- [ ] Find a command or file check that reports whether OpenCode is
-      authenticated without printing secrets; verify it before and after
-      login.
-- [ ] Find the non-interactive invocation for a delegated task, run one small
-      task, and record how output and exit code behave.
-- [ ] Check whether OpenCode reads `AGENTS.md` from the working directory.
-- [ ] Note the terms of OpenAI and GitHub on using their subscriptions
-      through OpenCode.
-- [ ] Write `docs/decisions/0002-opencode.md` and commit it.
+- Create: `.github/workflows/ci.yml`
 
-### Task 0.3: Antigravity (`agy`)
+**Interfaces:**
 
-Answers plan questions 1–5 for Antigravity.
+- Consumes: the `lint`, `typecheck`, `test`, and `build` scripts from
+  Task 1.1.
 
-- [ ] Repeat every step of Task 0.2 for Antigravity, saving output to
-      `.agent/spike/agy-login.txt`.
-- [ ] Write `docs/decisions/0003-antigravity.md` and commit it.
+- [ ] **Step 1:** Create a workflow that runs on `push` and `pull_request`,
+      on `ubuntu-latest` with Node.js 20 and 22, and runs `npm ci`,
+      `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`.
+- [ ] **Step 2:** Run the same commands locally in that order. Expected: all
+      pass.
+- [ ] **Step 3:** Commit and push. Expected: the workflow runs green on the
+      branch.
 
-### Task 0.4: Pseudo-terminal in Node.js
+### Task 1.3: Phase 1 review
 
-Answers plan question 6. Depends on Tasks 0.2 and 0.3.
-
-- [ ] In `.agent/spike/pty/`, try running each CLI's login command from a
-      Node.js process through: (a) a prebuilt pseudo-terminal package that
-      needs no compilation, and (b) the system `script` utility with piped
-      stdin and stdout.
-- [ ] For each option, check that the prompt URL can be read, input can be
-      written, and the child stays alive after the parent detaches.
-- [ ] Record install size, install time, and any native build step.
-- [ ] Write `docs/decisions/0004-pseudo-terminal.md` choosing one option, and
-      commit it.
-
-### Task 0.5: Skills and permissions in cloud agents
-
-Answers plan questions 7 and 8. Requires the project owner to edit a cloud
-environment's setup script and start a new session.
-
-- [ ] Confirm from current documentation where Claude Code loads user skills,
-      and where Codex loads them; record whether one `SKILL.md` format serves
-      both.
-- [ ] Confirm the current Claude Code permission rule syntax for allowing a
-      command prefix.
-- [ ] Prepare a setup script that installs a minimal test skill into the
-      user skill directory and adds one allow rule to
-      `~/.claude/settings.json`. The project owner adds it to a cloud
-      environment and starts a new session.
-- [ ] In that session, record whether the skill is listed and whether the
-      allowed command runs without a permission prompt.
-- [ ] Record how Codex Cloud handles command approvals and whether an
-      equivalent step is needed.
-- [ ] In a Codex Cloud session, record which environment variable identifies
-      Codex as the host agent, and whether the skill loads there.
-- [ ] Write `docs/decisions/0007-skills-and-permissions.md` and commit it.
-
-### Task 0.5a: Codex and Claude Code CLIs
-
-Added by the project owner during Phase 0. Recorded in
-`docs/decisions/0005-codex.md` and
-`docs/decisions/0006-claude-code-and-host-agent.md`.
-
-- [x] Codex: install, device-code login prompt, status check, `exec` flags.
-- [x] Claude Code: paste-code login prompt, status check, host detection.
-- [ ] Real login and delegation for each, by the project owner or a
-      volunteer with the subscription.
-- [ ] Logout command for each adapter: `opencode providers logout <id>`,
-      `codex logout`, `claude auth logout`, and the Antigravity equivalent
-      (only `/logout` inside the TUI is known), verified against
-      `isAuthenticated`.
-
-### Task 0.6: Spike review
-
-- [ ] Check that every question in `docs/plan.md` Phase 0 has an accepted or
-      blocked decision record.
-- [ ] Propose any spec, architecture, or plan changes the findings require.
-- [ ] Review the findings with the project owner. Phase 1 tasks are written
-      only after approval.
+- [ ] Confirm the Phase 1 exit criteria in `docs/plan.md`.
+- [ ] Write the Phase 2 tasks and present them to the project owner for
+      approval.

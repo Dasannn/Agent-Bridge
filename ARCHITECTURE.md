@@ -37,6 +37,7 @@ src/
 │   ├── status.ts
 │   ├── login.ts
 │   ├── logout.ts
+│   ├── run.ts       Runs a CLI in the managed environment
 │   ├── skill.ts     `--print` and `--repo`
 │   └── complete.ts
 ├── core/
@@ -101,8 +102,8 @@ A single-provider CLI such as Antigravity has one provider with id
 `default`, and `--provider` may be omitted for it. Session state and the
 session socket are keyed by agent and provider.
 
-`LoginPrompt` contains the URL to open, an optional device code, and, for the
-loopback strategy, the expected callback port.
+`LoginPrompt` contains the URL to open and, for device-code flows, the code
+the user enters.
 
 ### Login strategies (`src/core/strategies`)
 
@@ -111,11 +112,11 @@ A strategy defines how a pasted response is validated and delivered:
 | Strategy | `complete` input | Delivery |
 |---|---|---|
 | `paste-code` | Code shown by the provider | Written to the CLI's stdin |
-| `loopback-callback` | Full URL from the browser's address bar | Validated, then requested with HTTP GET on `127.0.0.1:<port>` inside the container |
 | `device-code` | None | Waits for the CLI to finish |
 
-v1 implements only the strategies used by its adapters, as determined by the
-spike.
+v1 implements only these two strategies (decisions 0002–0006): `paste-code`
+for Antigravity and Claude Code, and `device-code` for Codex and OpenCode's
+ChatGPT provider.
 
 ### Session runner (`src/core/session.ts`)
 
@@ -166,10 +167,16 @@ masking function that removes codes, tokens, and query parameters such as
 
 ### Paths (`src/core/paths.ts`)
 
-- State directory: `~/.agent-bridge/`, overridable with `AGENT_BRIDGE_HOME`
-  (used by tests). Directories are created with mode `0700`.
-- Skill installation targets: `~/.claude/skills/agent-bridge/` for Claude
-  Code, and the Codex location determined by the spike.
+- Agent-Bridge home: `AGENT_BRIDGE_HOME` if set; otherwise
+  `~/.agent-bridge/` when the home directory is writable; otherwise
+  `/tmp/agent-bridge/`. Directories are created with mode `0700`.
+- Portable mode (home not writable, decision 0008): CLIs are installed under
+  `<home>/prefix` and managed processes get `HOME`, `XDG_CONFIG_HOME`,
+  `XDG_DATA_HOME`, `XDG_CACHE_HOME`, and `CLAUDE_CONFIG_DIR` inside the
+  Agent-Bridge home, plus `<home>/prefix/bin` first on `PATH`. One function
+  builds this environment for `login`, `status`, `logout`, and `run`.
+- Skill targets: `~/.claude/skills/agent-bridge/` (Claude Code). Codex Cloud
+  has no writable user skill location; see `bridge skill`.
 
 Agent-Bridge never writes inside the current project directory, except
 `bridge skill --repo`, which writes only

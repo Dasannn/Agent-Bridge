@@ -1,6 +1,6 @@
 # 0001: Package Name and Container Baseline
 
-- Status: Accepted (package name provisional until the Phase 0 review)
+- Status: Accepted
 - Date: 2026-10-13
 
 ## Context
@@ -34,17 +34,13 @@ npm names checked with `npm view <name>`:
 
 ## Decision
 
-Publish as `@dasannn/agent-bridge`. The scoped name keeps the project name
-and avoids confusion with the unrelated `agent-bridge` package. The package
-still provides the `agent-bridge` and `bridge` commands.
-
-The project owner confirms the name, and the npm scope, at the Phase 0
-review. `cloud-agent-bridge` is the unscoped fallback.
+Publish as `cloud-agent-bridge` (chosen by the project owner at the Phase 0
+review). The package provides the `agent-bridge` and `bridge` commands.
 
 ## Consequences
 
 - The setup script line becomes
-  `npx -y @dasannn/agent-bridge setup --agents opencode,agy`.
+  `npx -y cloud-agent-bridge setup --agents ...`.
 - `docs/plan.md` Phase 5 and the README must use the final package name.
 - Node.js 22 is available in the cloud container, so the Node.js 20 floor in
   `docs/spec.md` holds.

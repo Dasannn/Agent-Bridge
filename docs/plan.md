@@ -94,18 +94,21 @@ build time, and implement `bridge setup` to install the CLIs and the skill
 and to grant the agent permission to run them.
 
 Exit criteria: in a fresh cloud session whose setup script runs
-`npx -y github:dasannn/agent-bridge setup --agents opencode,agy,codex,claude`, the skill is
+`npx -y github:dasannn/agent-bridge setup --agents opencode,agy,codex,claude`
+(Claude Code cloud), and in a Codex Cloud task using `bridge skill --print`,, the skill is
 loaded, no permission prompts appear, and the primary agent can authenticate and delegate to both CLIs on
 request, following a project's SDD workflow when one exists.
 
 ### Phase 5 — Release
 
-Write the README (installation, setup script line, usage, security notes, and
-a reminder to review each provider's terms), run the manual end-to-end
+Write the README (installation, setup for Claude Code cloud and Codex Cloud,
+required network hosts, usage, security notes, a reminder to review each
+provider's terms, and a prominent warning about reported Antigravity account
+restrictions), run the manual end-to-end
 checklist, and publish to npm.
 
 Exit criteria: all acceptance criteria in `docs/spec.md` are met and the
-package is installable with `npx -y agent-bridge setup`.
+package is installable with `npx -y cloud-agent-bridge setup`.
 
 ## Risks
 
