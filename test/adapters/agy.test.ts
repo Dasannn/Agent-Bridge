@@ -115,6 +115,11 @@ describe("agy logout", () => {
     expect(logoutAction(screens.onDoneSharing)).toEqual({ send: "\u001b[D" });
   });
 
+  it("ignores a stale cursor line above the live screen", () => {
+    const stale = `${screens.sharingOff}\n${screens.onDoneSharing}`;
+    expect(logoutAction(stale)).toEqual({ send: "\u001b[D" });
+  });
+
   it("trusts the scratch folder, then runs /logout", () => {
     expect(logoutAction(screens.trust)).toEqual({ send: "\r" });
     expect(logoutAction(screens.prompt)).toEqual({ send: "/logout" });

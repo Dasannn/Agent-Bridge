@@ -5,6 +5,8 @@ export interface Terminal {
   pid: number;
   /** Rendered screen and scrollback, wrapped lines joined, trailing spaces trimmed. */
   screen(): string;
+  /** Like `screen`, but only the rows currently on screen, without the scrollback. */
+  visible(): string;
   write(data: string): void;
   waitFor(predicate: (screen: string) => boolean, timeoutMs: number): Promise<boolean>;
   /** Resolves with the exit code once the process has exited and its output is rendered. */
@@ -61,10 +63,10 @@ export function spawnTerminal(command: string, args: string[], options: Terminal
     });
   });
 
-  function screen(): string {
+  function render(from: number): string {
     const buffer = emulator.buffer.active;
     const lines: string[] = [];
-    for (let i = 0; i < buffer.length; i++) {
+    for (let i = from; i < buffer.length; i++) {
       const line = buffer.getLine(i);
       if (!line) continue;
       const text = line.translateToString(true);
@@ -79,6 +81,9 @@ export function spawnTerminal(command: string, args: string[], options: Terminal
       .join("\n")
       .trimEnd();
   }
+
+  const screen = () => render(0);
+  const visible = () => render(emulator.buffer.active.baseY);
 
   async function waitFor(predicate: (s: string) => boolean, timeoutMs: number): Promise<boolean> {
     const deadline = Date.now() + timeoutMs;
@@ -98,6 +103,7 @@ export function spawnTerminal(command: string, args: string[], options: Terminal
   return {
     pid: child.pid,
     screen,
+    visible,
     write: (data) => child.write(data),
     waitFor,
     exited,

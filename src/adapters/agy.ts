@@ -66,7 +66,10 @@ export function logoutAction(screen: string): LogoutAction {
   if (/Do you trust the contents/.test(screen)) {
     return /> Yes, I trust this folder/.test(screen) ? { send: ENTER } : { send: UP };
   }
-  if (/Terms of Service & Data Use/.test(screen)) {
+  const terms = screen.lastIndexOf("Terms of Service & Data Use");
+  if (terms >= 0) {
+    // Only the latest drawing of the terms counts; older ones may linger above it.
+    screen = screen.slice(terms);
     const sharing = /\[x\] Yes, I agree/.test(screen);
     if (/>\s*\[[x ]\] Yes, I agree/.test(screen)) return { send: sharing ? ENTER : DOWN };
     if (/>\s+Previous/.test(screen)) return { send: sharing ? UP : RIGHT };
@@ -98,7 +101,7 @@ async function logout(env: NodeJS.ProcessEnv): Promise<void> {
     let acted = "";
     let actedAt = 0;
     while (Date.now() < deadline) {
-      const screen = terminal.screen();
+      const screen = terminal.visible();
       const action = logoutAction(screen);
       if (action === "done") return;
       if (action && (screen !== acted || Date.now() - actedAt > RESEND_MS)) {

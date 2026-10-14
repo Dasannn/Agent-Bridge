@@ -31,6 +31,18 @@ describe("spawnTerminal", () => {
     term.kill();
   });
 
+  it("visible shows only the live screen, not the scrollback", async () => {
+    const term = spawnTerminal(
+      process.execPath,
+      ["-e", "for (let i = 1; i <= 60; i++) console.log('line ' + i)"],
+      { env: env(), cwd: tmpdir(), rows: 10 },
+    );
+    await term.exited;
+    expect(term.screen()).toContain("line 1\n");
+    expect(term.visible()).not.toContain("line 1\n");
+    expect(term.visible()).toContain("line 60");
+  });
+
   it("reports the exit code", async () => {
     const term = start("paste-code");
     await term.waitFor((s) => s.includes("Paste code:"), 5000);
