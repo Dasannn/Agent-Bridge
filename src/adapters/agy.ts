@@ -45,18 +45,72 @@ async function isAuthenticated(env: NodeJS.ProcessEnv): Promise<boolean> {
   return (await runCommand(binary, ["models"], env, 60_000)).code === 0;
 }
 
-/** Antigravity has no logout subcommand; its TUI accepts `/logout`. */
+const ENTER = "\r";
+const UP = "\u001b[A";
+const DOWN = "\u001b[B";
+const RIGHT = "\u001b[C";
+const LEFT = "\u001b[D";
+
+export type LogoutAction = { send: string } | "done" | undefined;
+
+/**
+ * The key to press next while signing out of the TUI, "done" once signed out,
+ * or undefined to wait. Before it accepts `/logout`, a fresh install shows a
+ * first-run setup that ends with the terms and a data-sharing checkbox, which
+ * is on by default; Agent-Bridge turns sharing off and never confirms with it
+ * on.
+ */
+export function logoutAction(screen: string): LogoutAction {
+  if (/currently not signed in|Select login method/.test(screen)) return "done";
+  if (/>\s*\/logout\s+Log out/.test(screen)) return { send: ENTER };
+  if (/Do you trust the contents/.test(screen)) {
+    return /> Yes, I trust this folder/.test(screen) ? { send: ENTER } : { send: UP };
+  }
+  if (/Terms of Service & Data Use/.test(screen)) {
+    const sharing = /\[x\] Yes, I agree/.test(screen);
+    if (/>\s*\[[x ]\] Yes, I agree/.test(screen)) return { send: sharing ? ENTER : DOWN };
+    if (/>\s+Previous/.test(screen)) return { send: sharing ? UP : RIGHT };
+    if (/>\s+Done/.test(screen)) return { send: sharing ? LEFT : ENTER };
+    return undefined;
+  }
+  if (/Welcome to Antigravity CLI!/.test(screen) && /\[Next\]/.test(screen)) {
+    return { send: ENTER };
+  }
+  // Typed but its menu is not drawn yet.
+  if (/^>\s*\/logout\s*$/m.test(screen)) return undefined;
+  if (/\? for shortcuts/.test(screen)) return { send: "/logout" };
+  return undefined;
+}
+
+const LOGOUT_TIMEOUT_MS = 60_000;
+// A key whose screen has not changed after this long is taken as lost and sent again.
+const RESEND_MS = 3000;
+
+/** Antigravity has no logout subcommand and refuses `/logout` in print mode. */
 async function logout(env: NodeJS.ProcessEnv): Promise<void> {
   const binary = findBinary("agy", env);
   if (!binary) return;
-  const terminal = spawnTerminal(binary, [], { env, cwd: env.HOME ?? tmpdir() });
+  // agy asks to trust its working folder; an empty scratch folder is safe to trust.
+  const cwd = mkdtempSync(join(tmpdir(), "agy-logout-"));
+  const terminal = spawnTerminal(binary, [], { env, cwd });
   try {
-    await terminal.waitFor((screen) => screen.trim().length > 0, 30_000);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    terminal.write("/logout\r");
-    await terminal.waitFor((screen) => /signed out|logged out|not signed in/i.test(screen), 15_000);
+    const deadline = Date.now() + LOGOUT_TIMEOUT_MS;
+    let acted = "";
+    let actedAt = 0;
+    while (Date.now() < deadline) {
+      const screen = terminal.screen();
+      const action = logoutAction(screen);
+      if (action === "done") return;
+      if (action && (screen !== acted || Date.now() - actedAt > RESEND_MS)) {
+        terminal.write(action.send);
+        acted = screen;
+        actedAt = Date.now();
+      }
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
   } finally {
     await terminal.kill();
+    rmSync(cwd, { recursive: true, force: true });
   }
 }
 
