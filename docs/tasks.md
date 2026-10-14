@@ -23,234 +23,164 @@ Package, tooling, `bridge --help`/`--version`, and CI (green on Node 20 and
 22). Deferred minor findings from the Phase 1 review are carried into the
 first Phase 2 task that touches the same file.
 
-## Phase 2 — Core
+## Phase 2 — Core: complete
 
-Goal: the CLI-independent core, driven end to end against a fake CLI, with
-the `status`, `login`, `complete`, `logout`, and `run` commands working for
-any adapter. Real adapters come in Phase 3.
+The CLI-independent core and the `status`, `login`, `complete`, `logout`, and
+`run` commands, tested end to end against a fake CLI (89 tests). The Phase 2
+review's critical and important findings were fixed with regression tests.
+
+Interfaces that later phases rely on (beyond the Phase 2 plan):
+
+- `LoginProvider.normalizeResponse?(input: string): string | undefined` turns
+  a pasted callback URL into a code; without it only a bare code is accepted.
+- `Terminal.kill(): Promise<void>` stops the CLI's process group (SIGTERM,
+  then SIGKILL) and waits for it to be reaped.
+- Session state includes `cliPid`.
+- `AGENT_BRIDGE_PROMPT_TIMEOUT_MS` overrides the 30-second prompt timeout.
+
+Deferred minor findings (Phase 2 review): no lock against two simultaneous
+logins; a runner idles for 20 minutes if its CLI dies after the prompt; `run`
+does not forward signals or map signal exits to `128+n`; node-pty reports
+exit code 0 for a signal kill; `main` has no top-level error handler; the temp
+fallback directory is not re-checked for owner and mode.
+
+## Phase 3 — Adapters
+
+Goal: real adapters for Antigravity, Codex, Claude Code, and OpenCode, each
+proven against recorded CLI screens and, where the owner holds the
+subscription, a real login in a cloud container.
 
 Global constraints for this phase:
 
-- Runtime dependencies: exactly `@lydell/node-pty` `1.2.0-beta.15` and
-  `@xterm/headless` `6.0.0` (decision 0004), pinned. No others.
-- All CLI processes Agent-Bridge starts receive the environment from
-  `managedEnv` (Task 2.2). Nothing reads `process.env` directly except
-  `src/cli/bin.ts`, which passes it down.
-- No secret (pasted response, token) is ever written to state files or logs.
-  Rendered results mask their declared `secrets`, and raw CLI output passes
-  through `mask` before it is shown (Task 2.1).
-- Tests never touch the real home directory: they set `AGENT_BRIDGE_HOME`
-  and `HOME` to temporary directories.
-- Each task ends with `npm test`, `npm run typecheck`, and `npm run lint`
-  passing, then a commit.
+- Each adapter lives in its own file under `src/adapters/` and is the only
+  place that knows its CLI (constitution principle 5).
+- Adapters install their CLI into the Agent-Bridge prefix
+  (`<root>/prefix`), never globally, so the same code works with a
+  read-only home (decision 0008). `login` installs a missing CLI (FR-4).
+- Adapters never read, edit, or delete credential files; status and logout
+  use the CLI's own commands (decision 0006 and spec FR-4b).
+- Fixtures are real screens captured with `spawnTerminal`, with every
+  `state`, `code_challenge`, and code value replaced by placeholders.
 
-Review focus (inputs no single test exercises; reviewers check these):
+### Task 3.1: Shared adapter helpers
 
-1. A pasted response containing the code inside a full URL
-   (`...?code=XYZ&state=...`) for a paste-code login: it is accepted only if
-   the adapter says so, and never echoed unmasked.
-2. Two `bridge login` calls for the same agent in quick succession: the first
-   runner is stopped before the second starts; no orphan processes remain.
-3. The runner process outliving its CLI (CLI crashed): `complete` reports
-   the CLI's last screen, not a hang.
-4. A stale state file whose runner PID no longer exists: `status` and
-   `complete` treat it as no login in progress and remove it.
-5. A home directory that exists but is read-only: portable mode is chosen.
-
-### Task 2.1: Output and masking
-
-**Files:** Create `src/core/output.ts`; Test `test/core/output.test.ts`.
+**Files:** Create `src/adapters/util.ts`; Test `test/adapters/util.test.ts`.
 
 **Interfaces — Produces:**
 
-- `interface CommandResult { ok: boolean; message: string; data?: Record<string, unknown>; secrets?: string[] }`
-- `render(result: CommandResult, json: boolean): string` — text mode
-  returns `message` plus a newline; JSON mode returns
-  `JSON.stringify({ ok, message, ...data })` plus a newline. Values in
-  `secrets` are replaced with `***`. URL parameters are not masked here,
-  because login URLs (for example Claude's `code=true`) must stay intact.
-- `mask(text: string, secrets?: string[]): string` — replaces each
-  non-empty secret with `***`, and the values of URL query parameters
-  `code`, `token`, `access_token`, `refresh_token`, `id_token`, and `state`
-  with `***`. Used for raw CLI output (screens, error text).
+- `findBinary(name: string, env: NodeJS.ProcessEnv): string | undefined` —
+  searches `env.PATH`.
+- `runCommand(command: string, args: string[], env: NodeJS.ProcessEnv, timeoutMs?: number): Promise<{ code: number; stdout: string; stderr: string }>`
+  — no TTY; default timeout 30 s, reported as code `124`.
+- `npmInstall(pkg: string, env: NodeJS.ProcessEnv): Promise<void>` —
+  `npm install -g --prefix <prefix>` where `<prefix>` is the first `PATH`
+  entry's parent (the managed `prefix/bin`); throws with npm's stderr tail on
+  failure.
+- `stripAnsi(text: string): string`.
+- `joinedScreen(screen: string): string` — trims every line and joins them
+  without separators, for URLs that TUIs break across lines.
+- `Adapter` gains `install(env: NodeJS.ProcessEnv): Promise<void>`.
 
-- [ ] Tests: `masks listed secrets`; `masks code and state query
-      parameters` (`https://x/cb?code=abc&state=def&scope=s` →
-      `https://x/cb?code=***&state=***&scope=s`); `leaves text without
-      secrets unchanged`; `renders text`; `renders json with data fields`;
-      `render masks secrets in message`.
-- [ ] Run, watch them fail, implement, run them green, commit.
-
-### Task 2.2: Agent-Bridge home and managed environment
-
-**Files:** Create `src/core/paths.ts`; Test `test/core/paths.test.ts`.
-
-**Interfaces — Produces:**
-
-- `interface BridgeHome { root: string; portable: boolean }`
-- `resolveHome(env: NodeJS.ProcessEnv): BridgeHome` — `AGENT_BRIDGE_HOME`
-  wins (portable is true only if `HOME` is not writable); else
-  `$HOME/.agent-bridge` if `HOME` is writable; else `/tmp/agent-bridge`
-  with `portable: true`. Creates `root` with mode `0700`.
-- `managedEnv(env: NodeJS.ProcessEnv, home: BridgeHome): NodeJS.ProcessEnv`
-  — when `portable`, sets `HOME`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`,
-  `XDG_CACHE_HOME`, and `CLAUDE_CONFIG_DIR` under `root` and prepends
-  `<root>/prefix/bin` to `PATH`; otherwise returns a copy of `env` with
-  only `<root>/prefix/bin` prepended to `PATH`.
-- `sessionPaths(home: BridgeHome, agent: string, provider: string): { state: string; socket: string }`
-  under `<root>/sessions/`.
-
-- [ ] Tests: `uses AGENT_BRIDGE_HOME when set`; `uses ~/.agent-bridge when
-      home is writable`; `falls back to /tmp/agent-bridge when home is
-      read-only` (use a temp dir with mode `0500`; skip when running as root,
-      since root ignores the mode); `managedEnv redirects home variables only
-      in portable mode`; `managedEnv prepends prefix/bin to PATH`;
-      `creates root with mode 0700`.
+- [ ] Tests: `findBinary finds an executable on PATH and ignores
+      non-executables`; `runCommand returns code and output`; `runCommand
+      times out with 124`; `stripAnsi removes colour codes`; `joinedScreen
+      rebuilds a URL split across lines`. (`npmInstall` is exercised in
+      Task 3.6.)
 - [ ] Run, fail, implement, green, commit.
 
-### Task 2.3: Host agent detection
+### Task 3.2: Antigravity adapter
 
-**Files:** Create `src/core/host.ts`; Test `test/core/host.test.ts`.
+**Files:** Create `src/adapters/agy.ts`, `test/fixtures/agy-login.txt`;
+Test `test/adapters/agy.test.ts`. Modify `src/adapters/index.ts`.
 
-**Interfaces — Produces:** `detectHost(env: NodeJS.ProcessEnv): "claude" | "codex" | undefined`
-— `claude` if `CLAUDECODE` or `CLAUDE_CODE_ENTRYPOINT` is set; `codex` if
-`CODEX_THREAD_ID` or `CODEX_SESSION_ID` is set; otherwise `undefined`
-(decision 0006).
+Values from decision 0003: binary `agy`; install with the official script
+(`https://antigravity.google/cli/install.sh`) passing `--dir <prefix>/bin`;
+login command `["agy"]` with `keys: ["\r"]` (selects `1. Google OAuth`);
+strategy `paste-code`; `isAuthenticated`: `agy models` exits `0`;
+delegation example `bridge run agy -- -p "<task>" --output-format json --dangerously-skip-permissions`.
 
-- [ ] Tests: one per variable, plus `returns undefined for a plain
-      environment` and `ignores CODEX_HOME alone`.
+- [ ] Capture `agy-login.txt` from a logged-out `agy` (portable home)
+      after the menu key, and replace secrets with placeholders.
+- [ ] Tests: `parsePrompt extracts the full OAuth URL from the fixture`
+      (starts with `https://accounts.google.com/o/oauth2/auth?`, contains
+      `redirect_uri=https%3A%2F%2Fantigravity.google%2Foauth-callback`, ends
+      with the `state` placeholder); `parsePrompt returns undefined before the
+      URL is drawn` (menu screen); `metadata matches decision 0003`.
+- [ ] Find and record Antigravity's logout mechanism (the TUI `/logout` is
+      known); implement `logout` with it and verify against
+      `isAuthenticated`.
 - [ ] Run, fail, implement, green, commit.
 
-### Task 2.4: Adapter types, registry, and response validation
+### Task 3.3: Codex adapter
 
-**Files:** Create `src/core/adapter.ts`, `src/core/strategies.ts`; Test
-`test/core/adapter.test.ts`, `test/core/strategies.test.ts`.
+**Files:** Create `src/adapters/codex.ts`, `test/fixtures/codex-login.txt`;
+Test `test/adapters/codex.test.ts`. Modify `src/adapters/index.ts`.
 
-**Interfaces — Produces:**
+Values from decision 0005: binary `codex`; install `npmInstall("@openai/codex")`;
+login `["codex", "login", "--device-auth"]`; strategy `device-code`; prompt
+URL `https://auth.openai.com/codex/device` and a code like `XXXX-XXXXX`;
+`isAuthenticated`: `codex login status` exits `0`; logout `codex logout`;
+delegation example `bridge run codex -- exec "<task>" --json --skip-git-repo-check`.
 
-- `type StrategyId = "paste-code" | "device-code"`
-- `interface LoginPrompt { url: string; code?: string }`
-- `interface LoginProvider { id: string; command: string[]; keys?: string[]; strategy: StrategyId; parsePrompt(screen: string): LoginPrompt | undefined; isAuthenticated(env: NodeJS.ProcessEnv): Promise<boolean>; logout(env: NodeJS.ProcessEnv): Promise<void> }`
-  — `keys` are written to the terminal in order after the prompt screen
-  appears (for menus, such as Antigravity's `1. Google OAuth`).
-- `interface Adapter { id: string; displayName: string; binaries: string[]; requiresLogin: boolean; providers: LoginProvider[]; isInstalled(env: NodeJS.ProcessEnv): Promise<boolean>; delegationExample: string }`
-- `createRegistry(adapters: Adapter[]): { get(id: string): Adapter | undefined; list(): Adapter[]; provider(adapter: Adapter, id?: string): LoginProvider | undefined }`
-  — `provider` returns the only provider when `id` is omitted and there is
-  exactly one, otherwise the one matching `id`.
-- `validateResponse(strategy: StrategyId, input: string | undefined): { ok: true; value?: string } | { ok: false; error: string }`
-  — `paste-code`: trimmed, non-empty, at most 2048 characters, no
-  whitespace inside; `device-code`: always `ok`, `value` undefined.
-
-- [ ] Tests for registry lookup and provider selection (single, by id,
-      ambiguous → undefined), and for each validation rule.
+- [ ] Capture the fixture; tests for URL and code extraction and metadata.
 - [ ] Run, fail, implement, green, commit.
 
-### Task 2.5: Fake CLI and terminal wrapper
+### Task 3.4: Claude Code adapter
 
-**Files:** Create `test/fake-cli/fake-cli.mjs`, `src/core/terminal.ts`;
-Test `test/core/terminal.test.ts`. Modify `package.json` (runtime
-dependencies).
+**Files:** Create `src/adapters/claude.ts`, `test/fixtures/claude-login.txt`;
+Test `test/adapters/claude.test.ts`. Modify `src/adapters/index.ts`.
 
-**Fake CLI** (`node test/fake-cli/fake-cli.mjs <mode>`), using
-`$HOME/.fake-cli/auth` as its credential file:
+Values from decision 0006: binary `claude`; install
+`npmInstall("@anthropic-ai/claude-code")`; login `["claude", "auth", "login"]`;
+strategy `paste-code`; URL after `visit:` (keep `code=true` intact);
+`isAuthenticated`: `claude auth status --json` has `loggedIn: true`; logout
+`claude auth logout`; delegation example
+`bridge run claude -- -p "<task>" --output-format json`.
 
-- `paste-code`: sends a primary-device-attributes query (`ESC [ c`) and
-  waits for a reply before printing anything (like Antigravity); prints
-  `Open https://example.test/auth?state=s1` and `Paste code:`; reads one
-  line; on `GOOD-CODE` writes the auth file and exits `0`, otherwise prints
-  `Invalid code` and exits `1`.
-- `device-code`: prints `Go to https://example.test/device` and
-  `Enter code: ABCD-1234`, waits `FAKE_DEVICE_MS` (default 500 ms), writes
-  the auth file, exits `0`; with `FAKE_FAIL=1` prints `Denied` and exits `1`.
-- `silent`: prints nothing and waits until killed.
-- `status`: exits `0` if the auth file exists, `1` otherwise.
-- `logout`: deletes the auth file, exits `0`.
-
-**Interfaces — Produces:**
-
-- `spawnTerminal(command: string, args: string[], options: { env: NodeJS.ProcessEnv; cwd: string; cols?: number; rows?: number }): Terminal`
-- `interface Terminal { pid: number; screen(): string; write(data: string): void; waitFor(predicate: (screen: string) => boolean, timeoutMs: number): Promise<boolean>; exited: Promise<number>; kill(): void }`
-  — `screen()` returns the rendered buffer with wrapped lines joined and
-  trailing spaces trimmed; the emulator's replies are written back to the
-  process (decision 0004).
-
-- [ ] Tests: `answers terminal queries so the fake CLI draws`
-      (`paste-code` mode shows `Paste code:`); `screen joins wrapped lines`
-      (a 300-character URL at 80 columns is found intact); `reports the exit
-      code`; `kill stops the process`.
-- [ ] Add the two runtime dependencies, run, fail, implement, green, commit.
-
-### Task 2.6: Session runner
-
-**Files:** Create `src/core/session.ts`, `src/core/runner.ts`; Test
-`test/core/session.test.ts` (integration, uses the fake CLI through a test
-adapter in `test/helpers/fake-adapter.ts`).
-
-**Interfaces — Consumes:** Tasks 2.1–2.5. **Produces:**
-
-- `startLogin(args: { adapter: Adapter; provider: LoginProvider; home: BridgeHome; env: NodeJS.ProcessEnv; promptTimeoutMs?: number }): Promise<{ ok: true; prompt: LoginPrompt } | { ok: false; error: string; screen?: string }>`
-  — stops any runner for the same agent and provider, spawns
-  `runner.ts` detached (`process.execPath` with the compiled runner path),
-  and resolves when the runner reports a prompt or a failure. Default
-  prompt timeout 30 s.
-- `completeLogin(args: { agent: string; provider: string; home: BridgeHome; response?: string; timeoutMs?: number }): Promise<{ status: "done"; ok: boolean; message: string } | { status: "rejected"; error: string } | { status: "no-session" }>`
-  — default timeout 120 s for paste-code and 900 s for device-code (the
-  OpenAI device code expires in 15 minutes).
-- `cancelLogin(agent: string, provider: string, home: BridgeHome): Promise<void>`
-- `loginInProgress(agent: string, provider: string, home: BridgeHome): Promise<boolean>`
-  — false, and the stale files removed, when the runner PID is gone.
-- Runner protocol: newline-delimited JSON over the Unix socket from
-  `sessionPaths`. Request `{ "type": "complete", "response"?: string }`.
-  Replies as in `completeLogin`. The state file holds `pid`, `agent`,
-  `provider`, `strategy`, `prompt`, and `startedAt` — never the response.
-  The runner exits after completion, cancellation, or 20 minutes idle.
-
-- [ ] Tests, each against the fake CLI: `paste-code login succeeds with the
-      right code`; `rejects an empty response and keeps the login alive`;
-      `reports the CLI error for a wrong code`; `device-code login completes
-      without a response`; `device-code failure is reported`; `silent CLI
-      times out with its raw screen`; `completeLogin without a session
-      returns no-session`; `a second startLogin stops the first runner`;
-      `stale state file is cleaned up`; `state file never contains the
-      response`.
+- [ ] Capture the fixture in an isolated `CLAUDE_CONFIG_DIR` without the host
+      session's credentials, and record which environment variables must be
+      removed so a child `claude` does not inherit the host login.
+- [ ] Tests for URL extraction (with `code=true` preserved) and metadata.
 - [ ] Run, fail, implement, green, commit.
 
-### Task 2.7: Commands
+### Task 3.5: OpenCode adapter
 
-**Files:** Modify `src/cli/main.ts`; Create `src/cli/commands.ts`; Test
-`test/cli/commands.test.ts`.
+**Files:** Create `src/adapters/opencode.ts`,
+`test/fixtures/opencode-openai.txt`; Test `test/adapters/opencode.test.ts`.
+Modify `src/adapters/index.ts`.
 
-**Interfaces — Consumes:** Tasks 2.1–2.6. **Produces:** `main(argv, io, deps)`
-gains `deps: { env: NodeJS.ProcessEnv; registry: ReturnType<typeof createRegistry> }`
-(defaults: `process.env` and the real registry, which is empty until
-Phase 3). Arguments are parsed with `node:util` `parseArgs`; every command
-accepts `--json`.
+Values from decision 0002: binary `opencode`; install
+`npmInstall("opencode-ai")`; `requiresLogin: false`; providers `openai`
+(login `["opencode", "providers", "login"]`, keys type `OpenAI`, Enter, Down,
+Enter to choose "ChatGPT Pro/Plus (headless)", strategy `device-code`) and
+`github-copilot` (keys type `Copilot`, Enter, Enter; strategy
+`device-code`); `isAuthenticated`: `opencode providers list` output, ANSI
+stripped, names the provider; logout `opencode providers logout`, with the
+exact argument confirmed here; delegation example
+`bridge run opencode -- run "<task>" --format json`.
 
-- `status [agent]`: per adapter: `host`, `not installed`, `ready (no login
-  needed)`, `authenticated`, `not authenticated`, or `login in progress`.
-- `login <agent> [--provider id]`: refuses the host; reports `already
-  authenticated`; else `startLogin` and prints the user message: for
-  paste-code, "Open this URL, sign in, and paste the code you are shown";
-  for device-code, "Open this URL and enter the code <code>".
-- `complete <agent> [--provider id] [response]`: maps `completeLogin`
-  results to messages and exit codes (`rejected` and `no-session` exit `1`).
-- `logout <agent> [--provider id]`: refuses the host; calls the provider's
-  `logout`, then verifies `isAuthenticated` is false.
-- `run <agent> [--provider id] -- <args...>`: refuses the host; spawns the
-  adapter's first binary with `args` and `managedEnv`, inheriting stdio, and
-  exits with its code.
-- Unimplemented commands (`setup`, `skill`) print `Not implemented yet`
-  and exit `1` (closes the Phase 1 deferred minor).
-
-- [ ] Tests with the fake adapter for each command's success path, the host
-      refusal, unknown agent, `--json` shape, and the `--` separator in
-      `run`; plus `-h`/`-v` short flags (Phase 1 deferred minor).
+- [ ] Capture the OpenAI headless fixture; tests for URL and code
+      extraction, provider ids, and metadata.
 - [ ] Run, fail, implement, green, commit.
 
-### Task 2.8: Phase 2 review
+### Task 3.6: Install on login and live verification
 
-- [ ] Confirm the Phase 2 exit criteria in `docs/plan.md`, including every
-      error case in `docs/spec.md`.
-- [ ] Whole-branch review by a fresh reviewer, with the review focus above.
-- [ ] Write the Phase 3 tasks and present them to the project owner for
+**Files:** Modify `src/cli/commands.ts`; Test `test/cli/commands.test.ts`.
+
+- [ ] Test and implement: `login` calls `adapter.install` when the CLI is
+      missing, and reports an install failure with npm's or the script's
+      output.
+- [ ] Live, in a cloud container, for each adapter: `bridge login` shows the
+      prompt; `bridge status` reports correctly; `bridge run` delegates a
+      one-line task. Repeat the Antigravity login with the owner end to end,
+      once with a normal home and once in portable mode (`HOME` pointed at a
+      non-writable path), and verify each CLI honours the portable home
+      variables (spec remaining question 4).
+- [ ] Record results in `docs/decisions/0009-adapter-verification.md`.
+
+### Task 3.7: Phase 3 review
+
+- [ ] Confirm the Phase 3 exit criteria in `docs/plan.md`.
+- [ ] Whole-branch review by a fresh reviewer.
+- [ ] Write the Phase 4 tasks (skill and setup) and present them for
       approval.
