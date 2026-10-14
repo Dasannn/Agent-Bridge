@@ -48,8 +48,11 @@ follows it: the delegated task is tied to approved work, the subagent is told
 to follow the project's rules and sources of truth, and the result is reviewed
 against them before it is presented as done.
 
-Agent-Bridge never writes files into the user's repository. Its own state
-lives outside the project.
+Agent-Bridge never writes files into the user's repository, with one
+exception: when the user explicitly runs the command that adds the
+Agent-Bridge skill to the repository, it writes that single skill file and
+nothing else, and the user decides whether to commit it. Agent-Bridge's own
+state always lives outside the project.
 
 ### 5. One adapter per CLI
 

@@ -61,8 +61,7 @@ Provisional, for the Phase 0 review:
 
 ## Consequences
 
-- Writing a skill into the user's repository conflicts with constitution
-  principle 4 unless the user explicitly asks for it. The owner decides
-  whether to allow a command such as `bridge skill --repo` that writes only
-  `.agents/skills/agent-bridge/SKILL.md` on explicit request.
+- The project owner approved a narrow exception to constitution principle
+  4: `bridge skill --repo` writes only `.agents/skills/agent-bridge/SKILL.md`,
+  on explicit request, and never commits (spec FR-6a).
 - The README documents the Codex Cloud internet setting and host list.

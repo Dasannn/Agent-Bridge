@@ -161,6 +161,18 @@ instructs the primary agent to:
 The skill stays short. Messages, error details, and per-flow instructions come
 from Agent-Bridge's output rather than from the skill.
 
+### FR-6a `skill`
+
+`bridge skill` installs or shows the skill:
+
+- `bridge skill --print` prints the skill's content.
+- `bridge skill --repo` writes the skill to
+  `.agents/skills/agent-bridge/SKILL.md` in the current repository, for
+  agents that only load repository skills (Codex Cloud). It writes that one
+  file and nothing else, overwrites only a previous Agent-Bridge skill, never
+  commits, and tells the user to review and commit it.
+- The primary agent runs `bridge skill --repo` only when the user asks.
+
 ### FR-7 Project workflow
 
 When the user's project defines a workflow (for example in `AGENTS.md`,
@@ -199,7 +211,8 @@ Without a defined workflow, delegation proceeds normally.
 - Codes and tokens are never written to logs or to Agent-Bridge state, and are
   masked in any error output.
 - Agent-Bridge stores its own state outside the user's repository and never
-  writes files into the repository.
+  writes files into the repository, except the single skill file written by
+  `bridge skill --repo` on explicit request (FR-6a).
 - Agent-Bridge never asks for, accepts, or relays API keys through the chat.
   API keys belong in the cloud environment's secrets or environment
   variables, and the skill tells the primary agent never to request them.

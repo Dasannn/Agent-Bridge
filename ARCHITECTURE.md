@@ -37,6 +37,7 @@ src/
 │   ├── status.ts
 │   ├── login.ts
 │   ├── logout.ts
+│   ├── skill.ts     `--print` and `--repo`
 │   └── complete.ts
 ├── core/
 │   ├── adapter.ts   Adapter interface and registry
@@ -170,7 +171,9 @@ masking function that removes codes, tokens, and query parameters such as
 - Skill installation targets: `~/.claude/skills/agent-bridge/` for Claude
   Code, and the Codex location determined by the spike.
 
-Agent-Bridge never writes inside the current project directory.
+Agent-Bridge never writes inside the current project directory, except
+`bridge skill --repo`, which writes only
+`.agents/skills/agent-bridge/SKILL.md` on explicit request.
 
 ## Data Flow: Login
 
