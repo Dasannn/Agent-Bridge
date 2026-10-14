@@ -39,7 +39,7 @@ describe("npm package", () => {
 
   it("describes the release", () => {
     const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
-    expect(pkg.version).toBe("0.1.1");
+    expect(pkg.version).toBe("0.1.2");
     expect(pkg.repository.url).toContain("github.com/Dasannn/Agent-Bridge");
     expect(pkg.keywords.length).toBeGreaterThan(3);
     expect(pkg.author).toBeTruthy();

@@ -1,6 +1,6 @@
 {
   "name": "cloud-agent-bridge",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Authenticate coding-agent CLIs inside cloud agent sessions and delegate tasks to them.",
   "keywords": [
     "claude-code",
