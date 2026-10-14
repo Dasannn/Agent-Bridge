@@ -67,7 +67,31 @@ async function deviceCode() {
   process.exit(0);
 }
 
+async function loopback() {
+  const { createServer } = await import("node:http");
+  const server = createServer((req, res) => {
+    const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    const ok =
+      url.pathname === "/cb" &&
+      url.searchParams.get("state") === "s1" &&
+      url.searchParams.get("code") === "GOOD-CODE";
+    res.writeHead(ok ? 200 : 400).end(ok ? "Signed in" : "Login failed");
+    if (ok) saveAuth();
+    process.stdout.write(ok ? "Signed in\r\n" : "Login failed\r\n");
+    setTimeout(() => process.exit(ok ? 0 : 1), 100);
+  });
+  server.listen(0, "127.0.0.1", () => {
+    const redirect = encodeURIComponent(`http://127.0.0.1:${server.address().port}/cb`);
+    process.stdout.write(
+      `Open https://example.test/auth?redirect_uri=${redirect}&state=s1\r\nWaiting for the browser\r\n`,
+    );
+  });
+}
+
 switch (mode) {
+  case "loopback":
+    await loopback();
+    break;
   case "paste-code":
     await pasteCode();
     break;

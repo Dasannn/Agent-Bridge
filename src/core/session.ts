@@ -25,6 +25,8 @@ export interface RunnerConfig {
   home: BridgeHome;
   promptTimeoutMs: number;
   idleTimeoutMs: number;
+  /** Use the provider's device-code alternative. */
+  device?: boolean;
 }
 
 export type StartResult =
@@ -41,6 +43,7 @@ export const DEFAULT_IDLE_TIMEOUT_MS = 20 * 60_000;
 const COMPLETE_TIMEOUT_MS: Record<StrategyId, number> = {
   "paste-code": 120_000,
   "device-code": 900_000,
+  "loopback-callback": 120_000,
 };
 
 const defaultRunnerPath = () => fileURLToPath(new URL("./runner.js", import.meta.url));
@@ -118,6 +121,7 @@ export async function startLogin(args: {
   env: NodeJS.ProcessEnv;
   promptTimeoutMs?: number;
   idleTimeoutMs?: number;
+  device?: boolean;
   runnerPath?: string;
   adapterModule?: string;
 }): Promise<StartResult> {
@@ -135,6 +139,7 @@ export async function startLogin(args: {
     home,
     promptTimeoutMs: args.promptTimeoutMs ?? DEFAULT_PROMPT_TIMEOUT_MS,
     idleTimeoutMs: args.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS,
+    device: args.device,
   };
   const child = spawn(
     process.execPath,

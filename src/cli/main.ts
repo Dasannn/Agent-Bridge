@@ -32,7 +32,7 @@ Commands:
 
 Usage:
   bridge status [agent] [--json]
-  bridge login <agent> [--provider <id>] [--json]
+  bridge login <agent> [--provider <id>] [--device] [--json]
   bridge complete [<agent>] [--provider <id>] ["<code>"] [--json]
   bridge logout <agent> [--provider <id>] [--json]
   bridge run <agent> -- <arguments for the CLI>
@@ -93,7 +93,7 @@ export async function main(
     case "status":
       return emit(await commands.status(deps, agent));
     case "login":
-      return emit(await commands.login(deps, agent, values.provider));
+      return emit(await commands.login(deps, agent, values.provider, values.device === true));
     case "complete":
       // A code may start with "-"; it can be passed after "--".
       return emit(
@@ -122,6 +122,7 @@ function parseOptions(args: string[]) {
     options: {
       json: { type: "boolean" },
       provider: { type: "string" },
+      device: { type: "boolean" },
     },
   });
 }

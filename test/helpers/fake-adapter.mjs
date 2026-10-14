@@ -21,6 +21,11 @@ const devicePrompt = (screen) => {
   return url && code ? { url: url[1], code: code[1] } : undefined;
 };
 
+const linkPrompt = (screen) => {
+  const match = screen.match(/Open (https:\/\/example\.test\/auth\?\S+)/);
+  return match && screen.includes("Waiting for the browser") ? { url: match[1] } : undefined;
+};
+
 const provider = (id, mode, strategy, parsePrompt, prefix = []) => ({
   id,
   command: [...prefix, node, cli, mode],
@@ -65,6 +70,14 @@ export const adapters = [
           } catch {
             return undefined;
           }
+        },
+      },
+      {
+        ...provider("link", "loopback", "loopback-callback", linkPrompt),
+        device: {
+          command: [node, cli, "device-code"],
+          strategy: "device-code",
+          parsePrompt: devicePrompt,
         },
       },
       provider("denied", "device-code", "device-code", devicePrompt, [

@@ -39,3 +39,45 @@ describe("validateResponse", () => {
     expect(validateResponse("device-code", "whatever")).toEqual({ ok: true });
   });
 });
+
+describe("validateResponse for loopback-callback", () => {
+  const prompt = {
+    url: "https://auth.example.test/authorize?client_id=c&redirect_uri=http%3A%2F%2Flocalhost%3A1455%2Fauth%2Fcallback&state=S1",
+  };
+  const check = (input: string | undefined) => validateResponse("loopback-callback", input, prompt);
+
+  it("accepts the callback address and returns the path to request", () => {
+    expect(check(" http://localhost:1455/auth/callback?code=abc&state=S1 ")).toEqual({
+      ok: true,
+      value: "/auth/callback?code=abc&state=S1",
+    });
+  });
+
+  it("treats localhost and 127.0.0.1 alike, and accepts a missing scheme", () => {
+    expect(check("http://127.0.0.1:1455/auth/callback?code=abc&state=S1").ok).toBe(true);
+    expect(check("localhost:1455/auth/callback?code=abc&state=S1").ok).toBe(true);
+  });
+
+  it("passes a provider error through so the CLI can report it", () => {
+    expect(check("http://localhost:1455/auth/callback?error=access_denied&state=S1").ok).toBe(true);
+  });
+
+  it("rejects an address for another host, port, or path", () => {
+    expect(check("http://evil.test:1455/auth/callback?code=abc&state=S1").ok).toBe(false);
+    expect(check("http://localhost:9999/auth/callback?code=abc&state=S1").ok).toBe(false);
+    expect(check("http://localhost:1455/other?code=abc&state=S1").ok).toBe(false);
+  });
+
+  it("rejects an address from another login", () => {
+    const result = check("http://localhost:1455/auth/callback?code=abc&state=OTHER");
+    expect(result.ok === false && result.error).toMatch(/different login/i);
+  });
+
+  it("rejects a bare code or nothing, explaining what to paste", () => {
+    for (const input of ["abc123", "", undefined]) {
+      const result = check(input);
+      expect(result.ok === false && result.error).toMatch(/address bar/i);
+    }
+    expect(check("http://localhost:1455/auth/callback?state=S1").ok).toBe(false);
+  });
+});

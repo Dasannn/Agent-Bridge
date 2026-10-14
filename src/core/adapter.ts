@@ -1,4 +1,4 @@
-export type StrategyId = "paste-code" | "device-code";
+export type StrategyId = "paste-code" | "device-code" | "loopback-callback";
 
 export interface LoginPrompt {
   /** URL the user opens in their own browser. */
@@ -13,21 +13,27 @@ export interface KeyStep {
   send: string;
 }
 
-export interface LoginProvider {
-  id: string;
+/** How a login is started and read from the screen. */
+export interface LoginMethod {
   /** Login command, run in a pseudo-terminal with the managed environment. */
   command: string[];
   /** Keystrokes sent in order, each once its text is on the screen. */
   keys?: KeyStep[];
   strategy: StrategyId;
+  /** Extracts the prompt from the rendered screen text. */
+  parsePrompt(screen: string): LoginPrompt | undefined;
+}
+
+export interface LoginProvider extends LoginMethod {
+  id: string;
+  /** A device-code alternative to the default login, chosen with `--device`. */
+  device?: LoginMethod;
   /**
    * Turns what the user pasted into what the CLI expects, for example the
    * code from a full callback URL. Returns undefined when the input is not
    * acceptable. Without it, only a bare code is accepted.
    */
   normalizeResponse?(input: string): string | undefined;
-  /** Extracts the prompt from the rendered screen text. */
-  parsePrompt(screen: string): LoginPrompt | undefined;
   isAuthenticated(env: NodeJS.ProcessEnv): Promise<boolean>;
   logout(env: NodeJS.ProcessEnv): Promise<void>;
 }

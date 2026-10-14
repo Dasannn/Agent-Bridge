@@ -4,6 +4,7 @@ import { detectHost } from "../core/host.js";
 import { type CommandResult, mask } from "../core/output.js";
 import { type BridgeHome, managedEnv, resolveHome } from "../core/paths.js";
 import { completeLogin, loginInProgress, startLogin } from "../core/session.js";
+import { callbackTarget } from "../core/strategies.js";
 
 export interface Deps {
   env: NodeJS.ProcessEnv;
@@ -128,6 +129,7 @@ export async function login(
   deps: Deps,
   agent?: string,
   providerId?: string,
+  device = false,
 ): Promise<CommandResult> {
   const ctx = context(deps);
   const adapter = findAdapter(ctx, agent);
@@ -136,6 +138,8 @@ export async function login(
   if (refusal) return refusal;
   const provider = findProvider(ctx, adapter, providerId);
   if (isResult(provider)) return provider;
+  const method = device ? provider.device : provider;
+  if (!method) return fail(`${adapter.displayName} has no device-code login.`);
   if (!(await adapter.isInstalled(ctx.cliEnv))) {
     try {
       await adapter.install(ctx.cliEnv);
@@ -156,6 +160,7 @@ export async function login(
     runnerPath: deps.runnerPath,
     adapterModule: deps.adapterModule,
     promptTimeoutMs: Number(deps.env.AGENT_BRIDGE_PROMPT_TIMEOUT_MS) || undefined,
+    device,
   });
   if (!result.ok) {
     const screen = result.screen ? `\n\nLast output from the CLI:\n${mask(result.screen)}` : "";
@@ -166,14 +171,24 @@ export async function login(
 
   const flag = providerFlag(adapter, provider);
   const { url, code } = result.prompt;
-  const userMessage =
-    provider.strategy === "device-code"
-      ? `Open this URL in your browser, sign in, and enter the code ${code ?? "shown there"}:\n${url}\n\nTell me when you have finished.`
-      : `Open this URL in your browser, sign in, and paste the code you are shown back here:\n${url}`;
-  const next =
-    provider.strategy === "device-code"
-      ? `bridge complete ${adapter.id}${flag}`
-      : `bridge complete ${adapter.id}${flag} "<code>"`;
+  const command = `bridge complete ${adapter.id}${flag}`;
+  let userMessage: string;
+  let next: string;
+  switch (method.strategy) {
+    case "device-code":
+      userMessage = `Open this URL in your browser, sign in, and enter the code ${code ?? "shown there"}:\n${url}\n\nTell me when you have finished.`;
+      next = command;
+      break;
+    case "loopback-callback": {
+      const port = callbackTarget(result.prompt)?.port ?? "";
+      userMessage = `Open this URL in your browser and sign in:\n${url}\n\nYour browser will then show an error page for localhost. That is expected: copy the full address from the address bar (it starts with http://localhost:${port}/) and paste it back here.`;
+      next = `${command} "<address>"`;
+      break;
+    }
+    default:
+      userMessage = `Open this URL in your browser, sign in, and paste the code you are shown back here:\n${url}`;
+      next = `${command} "<code>"`;
+  }
   return {
     ok: true,
     message: `Relay this message to the user exactly:\n\n${userMessage}\n\nThen run: ${next}`,

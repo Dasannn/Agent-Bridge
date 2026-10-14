@@ -1,13 +1,14 @@
 // Session runner: a detached process that owns one CLI login between
 // `bridge login` and `bridge complete` (ARCHITECTURE.md, Session runner).
 import { rmSync, writeFileSync } from "node:fs";
+import { get } from "node:http";
 import { createServer, type Socket } from "node:net";
 import { pathToFileURL } from "node:url";
-import type { Adapter, LoginPrompt, LoginProvider } from "./adapter.js";
+import type { Adapter, LoginMethod, LoginPrompt, LoginProvider } from "./adapter.js";
 import { mask } from "./output.js";
 import { sessionPaths } from "./paths.js";
 import type { CompleteResult, RunnerConfig, SessionState, StartResult } from "./session.js";
-import { validateResponse } from "./strategies.js";
+import { callbackTarget, validateResponse } from "./strategies.js";
 import { spawnTerminal, type Terminal } from "./terminal.js";
 
 const KEY_DELAY_MS = 300;
@@ -43,9 +44,21 @@ async function loadProvider(): Promise<{ adapter: Adapter; provider: LoginProvid
   return { adapter, provider };
 }
 
+/** Delivers the pasted callback to the CLI's listener on the loopback interface. */
+function deliverCallback(port: number, path: string): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    const request = get({ host: "127.0.0.1", port, path, timeout: 15_000 }, (response) => {
+      response.resume();
+      response.on("end", () => resolve(undefined));
+    });
+    request.on("timeout", () => request.destroy(new Error("no answer")));
+    request.on("error", (error) => resolve((error as NodeJS.ErrnoException).code ?? error.message));
+  });
+}
+
 async function waitForPrompt(
   terminal: Terminal,
-  provider: LoginProvider,
+  provider: LoginMethod,
 ): Promise<LoginPrompt | undefined> {
   const deadline = Date.now() + config.promptTimeoutMs;
   for (const step of provider.keys ?? []) {
@@ -71,8 +84,15 @@ async function waitForPrompt(
 
 async function main(): Promise<void> {
   const { provider } = await loadProvider();
+  const chosen = config.device ? provider.device : provider;
+  if (!chosen) {
+    report({ ok: false, error: "This login has no device-code alternative." });
+    cleanup();
+    process.exit(1);
+  }
+  const method: LoginMethod = chosen;
   const env = process.env;
-  const [command, ...args] = provider.command;
+  const [command, ...args] = method.command;
   const terminal = spawnTerminal(command, args, { env, cwd: env.HOME ?? process.cwd() });
 
   let exitCode: number | undefined;
@@ -88,7 +108,7 @@ async function main(): Promise<void> {
   process.on("SIGTERM", () => void shutdown(0));
   process.on("SIGINT", () => void shutdown(0));
 
-  const prompt = await waitForPrompt(terminal, provider);
+  const prompt = await waitForPrompt(terminal, method);
   if (!prompt) {
     const error =
       exitCode === undefined
@@ -104,7 +124,7 @@ async function main(): Promise<void> {
     cliPid: terminal.pid,
     agent: config.agent,
     provider: config.provider,
-    strategy: provider.strategy,
+    strategy: method.strategy,
     prompt,
     startedAt: new Date().toISOString(),
   };
@@ -187,7 +207,7 @@ async function main(): Promise<void> {
           return;
         }
       }
-      const validation = validateResponse(provider.strategy, input);
+      const validation = validateResponse(method.strategy, input, prompt);
       if (!validation.ok) {
         reply(socket, { status: "rejected", error: validation.error });
         return;
@@ -196,8 +216,23 @@ async function main(): Promise<void> {
       const secrets = [request.response?.trim(), validation.value].filter(
         (secret): secret is string => Boolean(secret),
       );
-      if (validation.value !== undefined) terminal.write(`${validation.value}\r`);
-      result = finishLogin(request.timeoutMs, secrets);
+      const target = callbackTarget(prompt);
+      if (method.strategy === "loopback-callback" && target && validation.value !== undefined) {
+        const timeoutMs = request.timeoutMs;
+        const path = validation.value;
+        result = deliverCallback(target.port, path).then((error) =>
+          error
+            ? {
+                status: "done" as const,
+                ok: false,
+                message: `The CLI is no longer waiting for the browser (${error}).`,
+              }
+            : finishLogin(timeoutMs, secrets),
+        );
+      } else {
+        if (validation.value !== undefined) terminal.write(`${validation.value}\r`);
+        result = finishLogin(request.timeoutMs, secrets);
+      }
     }
     const outcome = await result;
     if (connected(socket)) {

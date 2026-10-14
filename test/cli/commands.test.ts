@@ -243,6 +243,51 @@ describe("login and complete", () => {
   });
 });
 
+describe("login by link", () => {
+  const callback = (stdout: string, query: string) => {
+    const url = new URL(stdout.match(/https:\/\/example\.test\/auth\?\S+/)?.[0] ?? "");
+    return `${url.searchParams.get("redirect_uri")}?${query}`;
+  };
+
+  it("logs in with the pasted callback address", async () => {
+    const { out, run } = setup();
+    expect(await run("login", "fake", "--provider", "link")).toBe(0);
+    expect(out.stdout).toMatch(/address bar/i);
+    expect(out.stdout).toContain('bridge complete fake --provider link "<address>"');
+    const address = callback(out.stdout, "code=GOOD-CODE&state=s1");
+    expect(await run("complete", address)).toBe(0);
+    expect(out.stdout).toContain("Signed in to Fake CLI");
+  });
+
+  it("rejects an address from another login without ending it", async () => {
+    const { out, run } = setup();
+    await run("login", "fake", "--provider", "link");
+    expect(await run("complete", callback(out.stdout, "code=GOOD-CODE&state=zz"))).toBe(1);
+    expect(out.stderr).toMatch(/different login/i);
+    expect(await run("complete", callback(out.stdout, "code=GOOD-CODE&state=s1"))).toBe(0);
+  });
+
+  it("reports a refused code without echoing it", async () => {
+    const { out, run } = setup();
+    await run("login", "fake", "--provider", "link");
+    expect(await run("complete", callback(out.stdout, "code=BAD-SECRET-7&state=s1"))).toBe(1);
+    expect(out.stdout + out.stderr).not.toContain("BAD-SECRET-7");
+  });
+
+  it("uses the device-code alternative with --device", async () => {
+    const { out, run } = setup();
+    expect(await run("login", "fake", "--provider", "link", "--device")).toBe(0);
+    expect(out.stdout).toContain("ABCD-1234");
+    expect(await run("complete", "fake", "--provider", "link")).toBe(0);
+  });
+
+  it("refuses --device for a login without one", async () => {
+    const { out, run } = setup();
+    expect(await run("login", "fake", "--provider", "paste", "--device")).toBe(1);
+    expect(out.stderr).toMatch(/no device-code login/i);
+  });
+});
+
 describe("portable home", () => {
   it("logs in when the real home directory is unusable", async () => {
     const { out, run } = setup({ HOME: "/nonexistent-agent-bridge-home" });
