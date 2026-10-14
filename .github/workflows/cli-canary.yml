@@ -1,0 +1,112 @@
+# Check that the latest supported CLIs still produce recognizable login URLs
+# (and device codes), without signing in or using secrets. See docs/guides/release.md.
+name: CLI canary
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  login:
+    name: ${{ matrix.case }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case: OpenCode OpenAI
+            agent: opencode
+            flags: --provider openai
+            host: auth.openai.com
+            code: false
+          - case: OpenCode GitHub Copilot
+            agent: opencode
+            flags: --provider github-copilot
+            host: github.com
+            code: true
+          - case: Antigravity
+            agent: agy
+            flags: ''
+            host: accounts.google.com
+            code: false
+          - case: Codex link
+            agent: codex
+            flags: ''
+            host: auth.openai.com
+            code: false
+          - case: Codex device
+            agent: codex
+            flags: --device
+            host: auth.openai.com
+            code: true
+          - case: Claude Code
+            agent: claude
+            flags: ''
+            # The adapter accepts HTTPS URLs; its recorded fixture uses claude.com.
+            host: claude.com
+            code: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Check login prompt
+        timeout-minutes: 10
+        shell: bash
+        env:
+          AGENT: ${{ matrix.agent }}
+          LOGIN_FLAGS: ${{ matrix.flags }}
+          EXPECTED_HOST: ${{ matrix.host }}
+          EXPECT_CODE: ${{ matrix.code }}
+        run: |
+          unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CODEX_THREAD_ID CODEX_SESSION_ID
+          flags=()
+          if [[ -n "$LOGIN_FLAGS" ]]; then
+            read -r -a flags <<< "$LOGIN_FLAGS"
+          fi
+          export LOGIN_OUTPUT="$RUNNER_TEMP/cli-canary-login.json"
+          # Stream stdout and stderr so a timeout also leaves the command output.
+          set +e
+          node dist/cli/bin.js login "$AGENT" "${flags[@]}" --json | tee "$LOGIN_OUTPUT"
+          login_exit=${PIPESTATUS[0]}
+          set -e
+          node -e '
+            const fs = require("node:fs");
+            const output = fs.readFileSync(process.env.LOGIN_OUTPUT, "utf8");
+            try {
+              if (Number(process.argv[1]) !== 0) {
+                throw new Error(`Login exited with code ${process.argv[1]}`);
+              }
+              const result = JSON.parse(output);
+              if (result.ok !== true) throw new Error("Login did not succeed");
+              if (typeof result.url !== "string") throw new Error("Missing login URL");
+              const url = new URL(result.url);
+              if (url.protocol !== "https:" || url.host !== process.env.EXPECTED_HOST) {
+                throw new Error(`Expected an HTTPS URL on ${process.env.EXPECTED_HOST}`);
+              }
+              if (process.env.EXPECT_CODE === "true" &&
+                  (typeof result.code !== "string" || !result.code.trim())) {
+                throw new Error("Missing device code");
+              }
+              console.log("Login prompt validated; leaving the login pending.");
+            } catch (error) {
+              console.error(error.message);
+              console.error("Full login stdout (stderr is streamed above):\n" + output);
+              process.exitCode = 1;
+            }
+          ' "$login_exit"
+      - name: Record status
+        if: always()
+        shell: bash
+        env:
+          AGENT: ${{ matrix.agent }}
+        run: |
+          unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CODEX_THREAD_ID CODEX_SESSION_ID
+          node dist/cli/bin.js status "$AGENT" --json

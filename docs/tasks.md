@@ -448,3 +448,17 @@ Fix with tests, or record why not:
       real terminal and unbounded status checks on exit paths remain, as
       harmless in cloud sessions.
 - [x] Hand the release checklist to the owner.
+
+## Phase 6 — Post-release hardening
+
+Goal: harden publishing and detect changes in the supported CLIs.
+
+### Task 6.1: Publish with npm trusted publishing and provenance
+
+- [x] Replace token authentication with npm trusted publishing and
+      provenance, and update the release guide (decision 0013).
+
+### Task 6.2: Weekly CLI canary
+
+- [x] Add a weekly CLI canary for the six supported login cases, checking
+      provider URLs and device codes, and update the release guide.

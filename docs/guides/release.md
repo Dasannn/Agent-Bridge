@@ -15,20 +15,26 @@ How to publish a version of `cloud-agent-bridge` to npm.
 
 ## One-time npm setup (owner)
 
-1. Create an account on [npmjs.com](https://www.npmjs.com) and turn on
-   two-factor authentication.
-2. Create a **granular access token**: Account → Access Tokens → Generate
-   New Token → Granular Access Token. Give it read and write permission on
-   packages; before the first release, use "All packages", because
-   `cloud-agent-bridge` does not exist yet. Set an expiry date. If your
-   account requires two-factor authentication for publishing, also tick
-   **Bypass two-factor authentication** on the token; otherwise the workflow
-   fails with `EOTP`.
-3. In the GitHub repository, add it as a secret: Settings → Secrets and
-   variables → Actions → New repository secret, named `NPM_TOKEN`.
+Configure a trusted publisher once. On [npmjs.com](https://www.npmjs.com),
+open `cloud-agent-bridge` → Settings → Trusted Publisher → GitHub Actions,
+with these values:
 
-After the first release you can narrow the token to `cloud-agent-bridge`.
-You can also replace it with npm's trusted publishing for GitHub Actions.
+- User: `Dasannn`.
+- Repository: `Agent-Bridge`.
+- Workflow filename: `publish.yml`.
+- Environment: leave empty.
+
+No token or repository secret is needed. The workflow uses Node.js 22
+(22.14.0 or later) and npm 11.5.1 or later, with `id-token: write`.
+`npm publish` detects OIDC automatically and generates provenance.
+Do not set `registry-url` in `actions/setup-node`: its generated `.npmrc`
+can make npm use a placeholder token instead of OIDC.
+
+### Retiring the old token
+
+After the first trusted release succeeds, delete the `NPM_TOKEN` repository
+secret and delete the old token on npm. Optionally set Publishing access to
+**Require two-factor authentication and disallow tokens**.
 
 ## Publishing
 
@@ -76,3 +82,21 @@ Follow only the README, in fresh environments:
   - start a new task and confirm that the agent loads the skill without
     being told (spec remaining question 3).
 - [ ] Record the results in a decision record for the release.
+
+## When the CLI canary fails
+
+The **CLI canary** workflow runs weekly against the latest supported CLIs.
+It checks that each login produces the expected provider URL and, for device
+logins, a non-empty code. It never signs in and needs no secrets.
+
+GitHub emails a failure to whoever last changed the workflow's schedule or
+re-enabled it, if they turned on email for Actions in their
+[notification settings](https://docs.github.com/en/subscriptions-and-notifications/how-tos/managing-github-actions-notifications).
+If the owner gets no email, disable and re-enable the workflow under
+Actions → CLI canary.
+In public repositories, scheduled workflows pause after 60 days without
+repository activity. Re-enable under Actions → CLI canary → Enable workflow
+([GitHub schedule documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)).
+
+Open the failing job and read the CLI output. Update the adapter's pattern
+with a test for the new output, then release a patch version.

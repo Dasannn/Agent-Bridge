@@ -1,0 +1,33 @@
+# 0013: npm Trusted Publishing
+
+- Status: Accepted
+- Date: 2026-10-14
+
+## Context
+
+The publish workflow used a granular npm token with a seven-day expiry and
+two-factor authentication bypass. It expires and needs replacing. It can
+also leak from the repository secret or wherever it is handled.
+
+## Decision
+
+Use npm trusted publishing through GitHub Actions, with provenance. The
+owner has configured `cloud-agent-bridge` on npm for user `Dasannn`,
+repository `Agent-Bridge`, workflow `publish.yml`, and no environment.
+
+The workflow keeps `contents: read` and adds `id-token: write`. It runs on
+Node.js 22 (22.14.0 or later) and installs npm 11.5.1 or later. It publishes
+with `npm publish --access public --provenance`.
+
+`npm publish` detects OIDC automatically. The workflow sets no token and
+does not pass `registry-url` to `actions/setup-node`, whose generated
+`.npmrc` could make npm use a placeholder token instead of OIDC.
+
+## Consequences
+
+- Publishing needs no repository secret or npm token.
+- Provenance is generated automatically and shown on npm.
+- The runner needs npm 11.5.1 or later and Node.js 22.14.0 or later.
+- The first trusted release verifies the setup end to end.
+- After it succeeds, the owner deletes the old repository secret and npm
+  token, following `docs/guides/release.md`.
