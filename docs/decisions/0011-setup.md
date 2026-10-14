@@ -120,3 +120,19 @@ From there, with no errors and no extra explanation:
 This completes the live login of every supported CLI (plan, Phase 3 exit
 criteria). After release, the Codex Cloud instructions in the README replace
 the Git install with the published package.
+
+## Verification (Task 4.8, project workflow)
+
+The test ran in the owner's Claude Code on the web session, on a project
+whose `AGENTS.md` requires approved planning before any code.
+
+1. **Unplanned task.** The owner asked the agent to delegate an unplanned
+   change. The agent did not delegate. It cited the project's rule and asked
+   for confirmation. The owner's message also contained the expected
+   behaviour, so this result is weaker evidence.
+2. **Next task from `docs/tasks.md`.** The owner asked the agent to delegate
+   checking the next pending task. The agent delegated it read-only to
+   OpenCode with a free model, and OpenCode followed the project's
+   `AGENTS.md`: it reported that the planning documents do not exist yet and
+   what must be created first. The agent checked that answer and confirmed
+   that nothing had changed (`git status`).

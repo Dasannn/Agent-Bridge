@@ -340,8 +340,102 @@ Answer before building `setup`; record in
 
 ### Task 4.8: Phase 4 review
 
-- [ ] Confirm the Phase 4 exit criteria in `docs/plan.md`.
+- [x] Confirm the Phase 4 exit criteria in `docs/plan.md` (decision 0011).
+- [x] Whole-branch review by a fresh reviewer. No Critical or Important
+      findings; the minor ones were fixed with tests, except the
+      `/bridge-code` quoting, which is accepted in decision 0011.
+- [x] Write the Phase 5 tasks (README and release) and present them for
+      approval.
+
+## Phase 5 — Release
+
+Goal: a stranger can install Agent-Bridge from npm and use it in Claude Code
+on the web and in Codex Cloud by following the README alone.
+
+Global constraints for this phase:
+
+- The owner publishes to npm and merges to `main`. Agents prepare and
+  verify, but never publish or merge.
+- No new features. Changes are limited to documentation, packaging, and the
+  deferred minor findings chosen below.
+
+### Task 5.1: Package metadata and contents
+
+**Files:** Modify `package.json`, `tsconfig.json`.
+
+- [ ] Version `0.1.0`, plus `repository`, `homepage`, `bugs`, `keywords`, and
+      `author`.
+- [ ] Source maps: either stop emitting them or stop pointing them at
+      unpublished `src/`.
+- [ ] `npm pack --dry-run` lists only `dist/`, `skill/`, `README.md`,
+      `LICENSE`, and `package.json`. A test or CI step checks this.
+- [ ] Installing the packed tarball globally, in a temporary prefix, gives a
+      working `bridge --version`, `bridge skill --print`, and `bridge setup`.
+
+### Task 5.2: Deferred minor findings
+
+Fix with tests, or record why not:
+
+- [ ] `main` has no top-level error handler, and parse errors ignore `--json`.
+- [ ] `run` does not forward `SIGINT`/`SIGTERM` to the CLI and maps signal
+      exits to `1`.
+- [ ] A runner idles for 20 minutes if its CLI dies after showing the prompt,
+      and `status` keeps saying "login in progress".
+- [ ] No lock against two simultaneous logins of the same CLI.
+- [ ] A failed Antigravity logout reports no screen output.
+- [ ] `finishLogin` can overrun its deadline by one slow status check.
+
+### Task 5.3: README
+
+**Files:** Create `README.md`.
+
+- [ ] What it is, in a few lines, and an example conversation.
+- [ ] Claude Code on the web setup:
+  - the setup script;
+  - the environment's network settings and the hosts each CLI needs;
+  - what `setup` installs.
+- [ ] Codex Cloud setup:
+  - internet access and allowed domains;
+  - the one-line task prompt that installs Agent-Bridge in `/tmp` and loads
+    the skill;
+  - the optional `bridge skill --repo`.
+- [ ] Usage:
+  - connecting each CLI, including `/bridge-code`, `--device`, and OpenCode's
+    free models;
+  - delegating;
+  - choosing the model and effort;
+  - switching accounts.
+- [ ] Limits:
+  - logins last only as long as the container, and a restart cancels a
+    pending login;
+  - GitHub logins are blocked inside Claude Code on the web.
+- [ ] Security notes: what is stored, where, and what never leaves the
+      container.
+- [ ] A reminder to review each provider's terms, and a prominent warning
+      about reported Antigravity account restrictions.
+- [ ] Antigravity's first-run setup is completed with data sharing turned off
+      when signing out (decision 0009).
+
+### Task 5.4: Release checklist
+
+**Files:** Create `docs/guides/release.md`.
+
+- [ ] Steps before publishing:
+  - green CI;
+  - `npm pack` check;
+  - version bump;
+  - changelog notes in the GitHub release.
+- [ ] Owner steps: merge to `main`, `npm publish`, and a Git tag.
+- [ ] Manual end-to-end check after publishing, following only the README:
+  - a fresh Claude Code on the web session and a fresh Codex Cloud task;
+  - one login and one delegation each;
+  - a committed repository skill loading in a new Codex Cloud task (spec
+    remaining question 3).
+
+### Task 5.5: Phase 5 review
+
+- [ ] Confirm that every acceptance criterion in `docs/spec.md` is met, with
+      a pointer to its evidence.
 - [ ] Whole-branch review by a fresh reviewer; fix Critical and Important
       findings.
-- [ ] Write the Phase 5 tasks (README and release) and present them for
-      approval.
+- [ ] Hand the release checklist to the owner.
