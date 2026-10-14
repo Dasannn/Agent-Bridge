@@ -58,4 +58,6 @@ process exited; the runner was re-parented to PID 1.
 - `ARCHITECTURE.md` should name both packages and state that
   `parsePrompt` receives rendered screen text.
 - Supported platforms are limited to those with `@lydell/node-pty`
-  prebuilds; Linux x64 and arm64 cover the cloud containers in scope.
+  prebuilds: Linux, macOS, and Windows on x64 and arm64.
+- `@lydell/node-pty` is published as a beta (`1.2.0-beta.15`), so its
+  version must be pinned exactly and upgraded deliberately.
