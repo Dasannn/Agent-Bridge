@@ -68,6 +68,36 @@ switch (mode) {
   case "device-code":
     await deviceCode();
     break;
+  case "menu": {
+    // Draws a loading screen, discards input typed too early, then shows a menu.
+    process.stdin.setRawMode?.(true);
+    process.stdin.resume();
+    let ready = false;
+    let typed = "";
+    process.stdin.on("data", (chunk) => {
+      if (!ready) return;
+      typed += chunk.toString("utf8");
+      if (typed.includes("\r")) {
+        if (typed.startsWith("2")) {
+          process.stdout.write(
+            "\r\nGo to https://example.test/device\r\nEnter code: ABCD-1234\r\n",
+          );
+          setTimeout(() => {
+            saveAuth();
+            process.exit(0);
+          }, 300);
+        } else {
+          process.stdout.write("\r\nWrong choice\r\n");
+          process.exit(1);
+        }
+      }
+    });
+    process.stdout.write("Loading...\r\n");
+    await sleep(800);
+    ready = true;
+    process.stdout.write("Pick 1 or 2: ");
+    break;
+  }
   case "stubborn":
     // Ignores the signals a terminal hangup or polite stop would send.
     process.on("SIGHUP", () => {});

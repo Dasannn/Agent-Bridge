@@ -44,6 +44,10 @@ export const adapters = [
       provider("device", "device-code", "device-code", devicePrompt),
       provider("silent", "silent", "paste-code", pastePrompt),
       provider("stubborn", "stubborn", "paste-code", pastePrompt),
+      {
+        ...provider("menu", "menu", "device-code", devicePrompt),
+        keys: [{ after: "Pick 1 or 2:", send: "2\r" }],
+      },
       provider("slow", "device-code", "device-code", devicePrompt, [
         "/usr/bin/env",
         "FAKE_DEVICE_MS=5000",

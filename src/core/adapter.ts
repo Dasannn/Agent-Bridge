@@ -7,12 +7,18 @@ export interface LoginPrompt {
   code?: string;
 }
 
+/** A keystroke sent once `after` appears on the screen (for menus and pickers). */
+export interface KeyStep {
+  after: string;
+  send: string;
+}
+
 export interface LoginProvider {
   id: string;
   /** Login command, run in a pseudo-terminal with the managed environment. */
   command: string[];
-  /** Keystrokes written in order once the CLI has drawn its first screen. */
-  keys?: string[];
+  /** Keystrokes sent in order, each once its text is on the screen. */
+  keys?: KeyStep[];
   strategy: StrategyId;
   /**
    * Turns what the user pasted into what the CLI expects, for example the

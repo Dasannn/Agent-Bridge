@@ -98,6 +98,15 @@ describe("session runner", () => {
     expect(await provider("device").isAuthenticated(env)).toBe(true);
   });
 
+  it("sends menu keys only after the expected text appears", async () => {
+    const { home, result } = await start("menu");
+    expect(result).toEqual({
+      ok: true,
+      prompt: { url: "https://example.test/device", code: "ABCD-1234" },
+    });
+    expect(await complete(home, "menu")).toMatchObject({ status: "done", ok: true });
+  });
+
   it("device-code failure is reported", async () => {
     const { home } = await start("denied");
     const done = await complete(home, "denied");

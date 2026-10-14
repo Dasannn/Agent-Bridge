@@ -27,7 +27,7 @@ describe("agy adapter", () => {
     expect(agy.providers).toHaveLength(1);
     expect(provider.id).toBe("default");
     expect(provider.command).toEqual(["agy"]);
-    expect(provider.keys).toEqual(["\r"]);
+    expect(provider.keys).toEqual([{ after: "Select login method", send: "\r" }]);
     expect(provider.strategy).toBe("paste-code");
     expect(agy.delegationExample).toContain("bridge run agy -- -p");
   });

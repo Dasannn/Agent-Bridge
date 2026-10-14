@@ -47,12 +47,15 @@ async function waitForPrompt(
   provider: LoginProvider,
 ): Promise<LoginPrompt | undefined> {
   const deadline = Date.now() + config.promptTimeoutMs;
-  if (provider.keys?.length) {
-    await terminal.waitFor((screen) => screen.trim().length > 0, config.promptTimeoutMs);
-    for (const key of provider.keys) {
-      await new Promise((resolve) => setTimeout(resolve, KEY_DELAY_MS));
-      terminal.write(key);
-    }
+  for (const step of provider.keys ?? []) {
+    const seen = await terminal.waitFor(
+      (screen) => screen.includes(step.after),
+      Math.max(0, deadline - Date.now()),
+    );
+    if (!seen) return undefined;
+    // Let the TUI finish drawing before it receives input.
+    await new Promise((resolve) => setTimeout(resolve, KEY_DELAY_MS));
+    terminal.write(step.send);
   }
   let prompt: LoginPrompt | undefined;
   await terminal.waitFor(

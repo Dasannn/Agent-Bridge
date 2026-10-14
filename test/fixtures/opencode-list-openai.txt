@@ -1,0 +1,16 @@
+T  Credentials [90m~/.local/share/opencode/auth.json
+|
+•  OpenAI [90mapi
+|
+—  1 credentials
+
+T  Environment
+|
+•  GitHub Copilot [90mGITHUB_TOKEN
+|
+•  Amazon Bedrock [90mAWS_ACCESS_KEY_ID
+|
+•  Amazon Bedrock [90mAWS_SECRET_ACCESS_KEY
+|
+—  3 environment variables
+

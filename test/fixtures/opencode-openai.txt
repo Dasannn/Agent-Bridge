@@ -1,0 +1,14 @@
+
+┌  Add credential
+OpenAI│
+◇  Select provider
+│  OpenAI
+│
+◇  Login method
+│  ChatGPT Pro/Plus (headless)
+│
+●  Go to: https://auth.openai.com/codex/device
+│
+●  Enter code: WXYZ-12345
+│
+◓  Waiting for authorization..

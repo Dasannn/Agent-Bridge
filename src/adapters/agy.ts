@@ -73,7 +73,7 @@ export const agy: Adapter = {
     {
       id: "default",
       command: ["agy"],
-      keys: ["\r"],
+      keys: [{ after: "Select login method", send: "\r" }],
       strategy: "paste-code",
       parsePrompt,
       isAuthenticated,
