@@ -36,7 +36,7 @@ export type CompleteResult =
   | { status: "rejected"; error: string }
   | { status: "no-session" };
 
-export const DEFAULT_PROMPT_TIMEOUT_MS = 30_000;
+export const DEFAULT_PROMPT_TIMEOUT_MS = 90_000;
 export const DEFAULT_IDLE_TIMEOUT_MS = 20 * 60_000;
 const COMPLETE_TIMEOUT_MS: Record<StrategyId, number> = {
   "paste-code": 120_000,
