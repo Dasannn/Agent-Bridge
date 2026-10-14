@@ -91,7 +91,8 @@ login of each CLI succeeds in a cloud session.
 
 Write `skill/SKILL.md`, generate its delegation examples from the adapters at
 build time, and implement `bridge setup` to install the CLIs and the skill
-and to grant the agent permission to run them.
+and to grant the agent permission to run them, plus the Claude Code
+`/bridge-code` command (FR-6b).
 
 Exit criteria: in a fresh cloud session whose setup script runs
 `npx -y github:dasannn/agent-bridge setup --agents opencode,agy,codex,claude`

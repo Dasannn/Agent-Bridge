@@ -184,6 +184,15 @@ instructs the primary agent to:
 The skill stays short. Messages, error details, and per-flow instructions come
 from Agent-Bridge's output rather than from the skill.
 
+### FR-6b Paste command
+
+So the user can finish a login without asking the primary agent in words,
+`setup` installs a Claude Code custom command, `/bridge-code <code>`, that
+runs `bridge complete` with the code. It is installed next to the skill
+(`~/.claude/commands/bridge-code.md`) and only where the skill is installed.
+Codex Cloud has no writable location for custom prompts, so there the user
+pastes the code in the chat.
+
 ### FR-6a `skill`
 
 `bridge skill` installs or shows the skill:
@@ -260,9 +269,12 @@ The Phase 0 spike answered the original open questions; see
 Still open, to be verified in the phase that needs them:
 
 1. Real login and delegation for Codex, Claude Code, and OpenCode's ChatGPT
-   provider (Phase 3, by the owner or a volunteer with the subscription).
+   and GitHub Copilot providers (by a volunteer with the subscription; see
+   decision 0009).
 2. The Claude Code permission rule syntax written by `setup` (Phase 4).
 3. Whether a committed repository skill loads at the start of a Codex Cloud
    task (release checklist).
-4. Each CLI's behavior under the portable home's redirected variables
-   (Phase 3).
+
+Each CLI's behavior under the portable home was verified in Phase 3
+(decision 0009), except Claude Code, which is the host agent in the
+container used.
