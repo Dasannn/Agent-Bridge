@@ -1,7 +1,7 @@
 name: CLI login changed
 description: Report a change to a supported CLI's login flow.
 title: "CLI login changed: "
-labels: [cli-change]
+labels: [bug]
 body:
   - type: dropdown
     id: cli
