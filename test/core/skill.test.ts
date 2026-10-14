@@ -40,3 +40,13 @@ describe("skill", () => {
     expect(skill().split("\n").length).toBeLessThan(170);
   });
 });
+
+describe("/bridge-code command", () => {
+  const command = () =>
+    readFileSync(new URL("../../skill/bridge-code.md", import.meta.url), "utf8");
+
+  it("runs bridge complete with the pasted text, quoted, and allows only that", () => {
+    expect(command()).toMatch(/^---\n[\s\S]*allowed-tools: Bash\(bridge complete \*\)\n[\s\S]*---\n/);
+    expect(command()).toContain("!`bridge complete '$ARGUMENTS'`");
+  });
+});
