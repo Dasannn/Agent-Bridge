@@ -136,6 +136,12 @@ switch (mode) {
     process.stdout.write("Open https://example.test/auth?state=s9\r\nPaste code: ");
     setInterval(() => {}, 1000);
     break;
+  case "quits":
+    // Shows a prompt, then gives up before any code arrives.
+    process.stdout.write("Open https://example.test/auth?state=s1\r\nPaste code: ");
+    await sleep(300);
+    process.exit(1);
+    break;
   case "silent":
     setInterval(() => {}, 1000);
     break;

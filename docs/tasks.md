@@ -377,14 +377,17 @@ Global constraints for this phase:
 
 Fix with tests, or record why not:
 
-- [ ] `main` has no top-level error handler, and parse errors ignore `--json`.
-- [ ] `run` does not forward `SIGINT`/`SIGTERM` to the CLI and maps signal
+- [x] `main` has no top-level error handler, and parse errors ignore `--json`.
+- [x] `run` does not forward `SIGINT`/`SIGTERM` to the CLI and maps signal
       exits to `1`.
-- [ ] A runner idles for 20 minutes if its CLI dies after showing the prompt,
+- [x] A runner idles for 20 minutes if its CLI dies after showing the prompt,
       and `status` keeps saying "login in progress".
-- [ ] No lock against two simultaneous logins of the same CLI.
-- [ ] A failed Antigravity logout reports no screen output.
-- [ ] `finishLogin` can overrun its deadline by one slow status check.
+- [x] No lock against two simultaneous logins of the same CLI. Not fixed:
+      the primary agent runs commands one at a time, and a second `login`
+      already cancels the first (FR-4). A lock would add stale-lock handling
+      for no realistic gain.
+- [x] A failed Antigravity logout reports no screen output.
+- [x] `finishLogin` can overrun its deadline by one slow status check.
 
 ### Task 5.3: README
 

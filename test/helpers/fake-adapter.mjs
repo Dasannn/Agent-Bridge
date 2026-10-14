@@ -49,6 +49,7 @@ export const adapters = [
       provider("paste", "paste-code", "paste-code", pastePrompt),
       provider("device", "device-code", "device-code", devicePrompt),
       provider("silent", "silent", "paste-code", pastePrompt),
+      provider("quits", "quits", "paste-code", pastePrompt),
       provider("stubborn", "stubborn", "paste-code", pastePrompt),
       provider("stays-open", "paste-code", "paste-code", pastePrompt, [
         "/usr/bin/env",

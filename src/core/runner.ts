@@ -151,6 +151,19 @@ async function main(): Promise<void> {
   let lingering: NodeJS.Timeout | undefined;
   const idle = setTimeout(() => void shutdown(0), config.idleTimeoutMs);
 
+  // A CLI may exit before anyone runs `complete`: it gave up, or a device-code
+  // login finished on its own. Keep a success for `complete`; end a failure.
+  terminal.exited.then(async (code) => {
+    if (result) return;
+    const ok = code === 0 && (await provider.isAuthenticated(env));
+    if (result) return;
+    if (ok) {
+      result = Promise.resolve({ status: "done", ok: true, message: "Signed in." });
+    } else {
+      await shutdown(0);
+    }
+  });
+
   /**
    * Waits until the CLI exits or reports a signed-in account. Some CLIs
    * (Antigravity) stay open after a successful login, so exiting is not required.
@@ -175,9 +188,14 @@ async function main(): Promise<void> {
             ? { status: "done", ok: true, message: "Signed in." }
             : failure(code);
         }
-        if (await provider.isAuthenticated(env)) {
-          return { status: "done", ok: true, message: "Signed in." };
-        }
+        // A status check may be slow; never let it run past the deadline.
+        const signedIn = await Promise.race([
+          provider.isAuthenticated(env),
+          new Promise<false>((resolve) =>
+            setTimeout(() => resolve(false), Math.max(0, deadline - Date.now())),
+          ),
+        ]);
+        if (signedIn) return { status: "done", ok: true, message: "Signed in." };
       }
       return { status: "done", ok: false, message: "Timed out waiting for the CLI to finish." };
     } catch (error) {

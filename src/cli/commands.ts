@@ -84,8 +84,9 @@ function providerFlag(adapter: Adapter, provider: LoginProvider): string {
 }
 
 async function providerState(ctx: Context, adapter: Adapter, provider: LoginProvider) {
+  if (await provider.isAuthenticated(ctx.cliEnv)) return "authenticated";
   if (await loginInProgress(adapter.id, provider.id, ctx.home)) return "login in progress";
-  return (await provider.isAuthenticated(ctx.cliEnv)) ? "authenticated" : "not authenticated";
+  return "not authenticated";
 }
 
 export async function status(deps: Deps, agent?: string): Promise<CommandResult> {
