@@ -1,6 +1,6 @@
 # 0007: Skills and Permissions in Cloud Agents
 
-- Status: Blocked for Codex Cloud skill loading; Claude Code cloud pending
+- Status: Accepted for Claude Code cloud; Codex Cloud under investigation
 - Date: 2026-10-14
 
 ## Context
@@ -42,8 +42,11 @@ directory from the working directory up to the repository root.
 
 ### Claude Code cloud
 
-Pending: the owner's probe with a setup script that writes
-`~/.claude/skills/agent-bridge-probe/SKILL.md`.
+Verified. A setup script that writes
+`~/.claude/skills/agent-bridge-probe/SKILL.md` makes the skill available in
+new sessions: the agent answered the probe question from the loaded skill and
+named its path (`/root/.claude/skills/agent-bridge-probe`). The setup script
+runs before the agent starts and its home directory is the agent's.
 
 ## Decision
 
