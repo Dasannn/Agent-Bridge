@@ -22,7 +22,8 @@ reviewed before execution.
 
 ### Phase 0 — Spike: verify the target CLIs
 
-Investigate OpenCode and Antigravity (`agy`) in a cloud container, without
+Investigate OpenCode, Antigravity (`agy`), Codex CLI, and Claude Code CLI in
+a cloud container, without
 writing product code.
 
 Answers required:
@@ -79,7 +80,8 @@ CLI for every selected strategy and every error case in `docs/spec.md`.
 
 ### Phase 3 — Adapters
 
-Implement the OpenCode and Antigravity adapters using the spike's decisions
+Implement the OpenCode, Antigravity, Codex, and Claude Code adapters, and
+host-agent detection, using the spike's decisions
 and fixtures.
 
 Exit criteria: adapter tests pass against recorded fixtures, and a manual
@@ -92,7 +94,7 @@ build time, and implement `bridge setup` to install the CLIs and the skill
 and to grant the agent permission to run them.
 
 Exit criteria: in a fresh cloud session whose setup script runs
-`npx -y github:dasannn/agent-bridge setup --agents opencode,agy`, the skill is
+`npx -y github:dasannn/agent-bridge setup --agents opencode,agy,codex,claude`, the skill is
 loaded, no permission prompts appear, and the primary agent can authenticate and delegate to both CLIs on
 request, following a project's SDD workflow when one exists.
 

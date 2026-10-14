@@ -36,6 +36,7 @@ src/
 │   ├── setup.ts
 │   ├── status.ts
 │   ├── login.ts
+│   ├── logout.ts
 │   └── complete.ts
 ├── core/
 │   ├── adapter.ts   Adapter interface and registry
@@ -43,10 +44,13 @@ src/
 │   ├── strategies/  Login strategies (only those used by v1 adapters)
 │   ├── output.ts    Text and JSON output, secret masking
 │   ├── permissions.ts  Allow rules merged into agent settings
+│   ├── host.ts      Detects the host agent from the environment
 │   └── paths.ts     State and skill locations
 ├── adapters/
 │   ├── opencode.ts
-│   └── agy.ts
+│   ├── agy.ts
+│   ├── codex.ts
+│   └── claude.ts
 skill/
 └── SKILL.md         Shipped skill, installed by `setup`
 test/
@@ -69,7 +73,7 @@ registered in a static registry in `core/adapter.ts`.
 
 ```ts
 interface Adapter {
-  id: string;                         // "opencode", "agy"
+  id: string;                         // "opencode", "agy", "codex", "claude"
   displayName: string;
   binaries: string[];                 // commands to allow, e.g. ["opencode"]
   isInstalled(): Promise<boolean>;
@@ -84,6 +88,7 @@ interface Adapter {
 interface LoginProvider {
   id: string;                         // "default", "openai", "github-copilot"
   isAuthenticated(): Promise<boolean>;
+  logout(): Promise<void>;            // uses the CLI's own logout
   command: string[];                  // login command for this provider
   input?: string[];                   // keystrokes to pick the provider, if needed
   strategy: StrategyId;
@@ -135,8 +140,11 @@ response, and waits for the result.
 
 Starting a new login for an agent stops any existing runner for it first.
 
-The choice of pseudo-terminal implementation is settled by the spike, with a
-preference for one that does not require native compilation.
+The runner uses `@lydell/node-pty` (prebuilt, no compilation) for the
+pseudo-terminal and `@xterm/headless` to emulate the terminal: CLI output is
+written into the emulator, the emulator's replies to terminal queries are
+written back to the CLI, and `parsePrompt` receives the rendered screen text
+with wrapped lines joined. See `docs/decisions/0004-pseudo-terminal.md`.
 
 ### Permissions (`src/core/permissions.ts`)
 

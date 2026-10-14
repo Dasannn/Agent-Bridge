@@ -10,7 +10,8 @@ Cloud coding agents (Claude Code on the web, Codex Cloud) run in remote,
 ephemeral containers. The user talks to the agent through a chat and never has
 direct access to the container's terminal or network.
 
-Other coding-agent CLIs, such as OpenCode and Antigravity (`agy`), can be
+Other coding-agent CLIs, such as OpenCode, Antigravity (`agy`), Codex, and
+Claude Code, can be
 installed in that container, but their login flows assume a human at the same
 machine: they open a local browser, wait for typed input, or redirect to a
 callback on `localhost`. A user at home cannot complete these flows, so the
@@ -43,7 +44,12 @@ then ask the primary agent to delegate tasks to those CLIs.
 
 ## Scope (v1)
 
-Supported CLIs: **OpenCode** and **Antigravity (`agy`)**.
+Supported CLIs: **OpenCode**, **Antigravity (`agy`)**, **Codex CLI** (for
+ChatGPT subscriptions), and **Claude Code CLI** (for Claude subscriptions).
+
+The agent Agent-Bridge runs inside (the host agent) is never a delegation
+target: inside Codex, Codex is excluded; inside Claude Code, Claude Code is
+excluded.
 
 Supported platforms: Linux containers with Node.js 20 or later. Local use on
 macOS or Linux is allowed but not a primary target.
@@ -51,7 +57,7 @@ macOS or Linux is allowed but not a primary target.
 ### Out of scope
 
 - Persisting credentials across sessions (credential vault).
-- CLIs other than OpenCode and Antigravity.
+- CLIs other than OpenCode, Antigravity, Codex CLI, and Claude Code CLI.
 - An MCP server, a Claude Code plugin, or any hosted service.
 - Windows support.
 - Delegation performed by Agent-Bridge itself. The primary agent runs the
@@ -67,6 +73,8 @@ Agent-Bridge is distributed as an npm package that provides the command
 ### FR-2 `setup`
 
 `bridge setup --agents <list>` prepares a session:
+
+- Detects the host agent and skips it if it is listed.
 
 - Installs each listed CLI if it is not already installed.
 - Installs the Agent-Bridge skill where the primary agent loads skills.
@@ -105,6 +113,21 @@ models) is reported as ready once installed.
 - If a login for the same CLI is already in progress, it is cancelled and a
   new one started.
 
+### FR-4a Host agent
+
+Agent-Bridge detects the host agent from its environment. `status` reports
+it as the host, `login` refuses it with an explanation, and the skill never
+offers it as a delegation target.
+
+### FR-4b `logout`
+
+`bridge logout <agent> [--provider <id>]` signs the CLI (or one provider of a
+multi-provider CLI) out using the CLI's own logout mechanism, and verifies
+that it is no longer authenticated. Switching accounts, for example when one
+account runs out of usage, is `logout` followed by `login`. Agent-Bridge
+never deletes or edits credential files itself. The host agent cannot be
+logged out.
+
 ### FR-5 `complete`
 
 `bridge complete <agent> [response]`:
@@ -123,6 +146,8 @@ models) is reported as ready once installed.
 Agent-Bridge ships one skill, `SKILL.md`, usable by Claude Code and Codex. It
 instructs the primary agent to:
 
+- Use `logout` then `login` when the user asks to switch accounts, for
+  example after running out of usage on one account.
 - Use `status`, `login`, and `complete` to authenticate a CLI when the user
   asks to connect it, or when the user asks to delegate to it and it is not
   authenticated.
@@ -184,7 +209,7 @@ Without a defined workflow, delegation proceeds normally.
 ## Acceptance Criteria
 
 1. In a fresh cloud session whose setup script runs `bridge setup --agents
-   opencode,agy`, both CLIs and the skill are available without further
+   opencode,agy,codex,claude`, every listed CLI except the host agent and the skill are available without further
    manual steps.
 2. For each supported CLI, a user can authenticate in a cloud session by
    opening one URL and pasting back one response through the chat.

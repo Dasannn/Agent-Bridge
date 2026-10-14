@@ -120,7 +120,24 @@ environment's setup script and start a new session.
       allowed command runs without a permission prompt.
 - [ ] Record how Codex Cloud handles command approvals and whether an
       equivalent step is needed.
-- [ ] Write `docs/decisions/0005-skills-and-permissions.md` and commit it.
+- [ ] In a Codex Cloud session, record which environment variable identifies
+      Codex as the host agent, and whether the skill loads there.
+- [ ] Write `docs/decisions/0007-skills-and-permissions.md` and commit it.
+
+### Task 0.5a: Codex and Claude Code CLIs
+
+Added by the project owner during Phase 0. Recorded in
+`docs/decisions/0005-codex.md` and
+`docs/decisions/0006-claude-code-and-host-agent.md`.
+
+- [x] Codex: install, device-code login prompt, status check, `exec` flags.
+- [x] Claude Code: paste-code login prompt, status check, host detection.
+- [ ] Real login and delegation for each, by the project owner or a
+      volunteer with the subscription.
+- [ ] Logout command for each adapter: `opencode providers logout <id>`,
+      `codex logout`, `claude auth logout`, and the Antigravity equivalent
+      (only `/logout` inside the TUI is known), verified against
+      `isAuthenticated`.
 
 ### Task 0.6: Spike review
 
