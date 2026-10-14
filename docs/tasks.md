@@ -393,31 +393,31 @@ Fix with tests, or record why not:
 
 **Files:** Create `README.md`.
 
-- [ ] What it is, in a few lines, and an example conversation.
-- [ ] Claude Code on the web setup:
+- [x] What it is, in a few lines, and an example conversation.
+- [x] Claude Code on the web setup:
   - the setup script;
   - the environment's network settings and the hosts each CLI needs;
   - what `setup` installs.
-- [ ] Codex Cloud setup:
+- [x] Codex Cloud setup:
   - internet access and allowed domains;
   - the one-line task prompt that installs Agent-Bridge in `/tmp` and loads
     the skill;
   - the optional `bridge skill --repo`.
-- [ ] Usage:
+- [x] Usage:
   - connecting each CLI, including `/bridge-code`, `--device`, and OpenCode's
     free models;
   - delegating;
   - choosing the model and effort;
   - switching accounts.
-- [ ] Limits:
+- [x] Limits:
   - logins last only as long as the container, and a restart cancels a
     pending login;
   - GitHub logins are blocked inside Claude Code on the web.
-- [ ] Security notes: what is stored, where, and what never leaves the
+- [x] Security notes: what is stored, where, and what never leaves the
       container.
-- [ ] A reminder to review each provider's terms, and a prominent warning
+- [x] A reminder to review each provider's terms, and a prominent warning
       about reported Antigravity account restrictions.
-- [ ] Antigravity's first-run setup is completed with data sharing turned off
+- [x] Antigravity's first-run setup is completed with data sharing turned off
       when signing out (decision 0009).
 
 ### Task 5.4: Release checklist

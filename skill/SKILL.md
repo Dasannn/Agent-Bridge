@@ -10,6 +10,17 @@ subscriptions, through this chat, and runs them for delegation. Its output is
 written for you: follow it, and relay to the user exactly what it says to
 relay.
 
+## If `bridge` is not found
+
+Where the home directory is read-only (Codex Cloud), install Agent-Bridge in
+`/tmp` once per task and call it by its full path wherever this skill says
+`bridge`:
+
+```bash
+npm_config_cache=/tmp/npm-cache npm install --prefix /tmp/ab cloud-agent-bridge
+/tmp/ab/node_modules/.bin/bridge status
+```
+
 ## Rules
 
 - Delegate only when the user explicitly asks, and only to the CLI they name.
