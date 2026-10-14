@@ -456,7 +456,8 @@ Goal: harden publishing and detect changes in the supported CLIs.
 ### Task 6.1: Publish with npm trusted publishing and provenance
 
 - [x] Replace token authentication with npm trusted publishing and
-      provenance, and update the release guide (decision 0013).
+      staged publishing with provenance and owner approval, and update the
+      release guide (decision 0013).
 
 ### Task 6.2: Weekly CLI canary
 

@@ -24,9 +24,12 @@ with these values:
 - Workflow filename: `publish.yml`.
 - Environment: leave empty.
 
+The trusted publisher allows `npm stage publish` only, so the workflow
+stages releases for the owner's approval.
+
 No token or repository secret is needed. The workflow uses Node.js 22
-(22.14.0 or later) and npm 11.5.1 or later, with `id-token: write`.
-`npm publish` detects OIDC automatically and generates provenance.
+(22.14.0 or later) and npm 11.15.0 or later, with `id-token: write`.
+`npm stage publish` detects OIDC automatically and generates provenance.
 Do not set `registry-url` in `actions/setup-node`: its generated `.npmrc`
 can make npm use a placeholder token instead of OIDC.
 
@@ -49,7 +52,13 @@ The **Publish** workflow (`.github/workflows/publish.yml`) then:
 
 1. runs the checks;
 2. confirms the tag matches `package.json`;
-3. publishes the package.
+3. stages the package for the owner's approval.
+
+The owner then opens npmjs.com → `cloud-agent-bridge` → Staged Packages →
+reviews the staged release → Approve with 2FA, or runs
+`npm stage approve <stage-id>` with 2FA. OIDC tokens cannot approve a release.
+The version is not public until approved; staging reserves its semver
+version. To reject the staged release, run `npm stage reject <stage-id>`.
 
 You can also create the tag from GitHub: Releases → Draft a new release →
 choose a tag `v0.1.0` on `main`. The release notes are the changelog.

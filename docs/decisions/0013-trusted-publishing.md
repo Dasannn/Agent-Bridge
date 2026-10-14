@@ -14,20 +14,26 @@ also leak from the repository secret or wherever it is handled.
 Use npm trusted publishing through GitHub Actions, with provenance. The
 owner has configured `cloud-agent-bridge` on npm for user `Dasannn`,
 repository `Agent-Bridge`, workflow `publish.yml`, and no environment.
+The trusted publisher allows `npm stage publish` only. Each release is
+staged for the owner's approval with 2FA.
 
 The workflow keeps `contents: read` and adds `id-token: write`. It runs on
-Node.js 22 (22.14.0 or later) and installs npm 11.5.1 or later. It publishes
-with `npm publish --access public --provenance`.
+Node.js 22 (22.14.0 or later) and installs npm 11.15.0 or later. It stages
+with `npm stage publish --access public`.
 
-`npm publish` detects OIDC automatically. The workflow sets no token and
+`npm stage publish` detects OIDC automatically and generates provenance.
+The workflow sets no token and
 does not pass `registry-url` to `actions/setup-node`, whose generated
 `.npmrc` could make npm use a placeholder token instead of OIDC.
 
 ## Consequences
 
-- Publishing needs no repository secret or npm token.
+- Staging needs no repository secret or npm token.
+- Each release needs human approval with 2FA before it becomes public;
+  OIDC tokens cannot approve, so a compromised workflow cannot publish alone.
+- A staged version reserves its semver version.
 - Provenance is generated automatically and shown on npm.
-- The runner needs npm 11.5.1 or later and Node.js 22.14.0 or later.
+- The runner needs npm 11.15.0 or later and Node.js 22.14.0 or later.
 - The first trusted release verifies the setup end to end.
 - After it succeeds, the owner deletes the old repository secret and npm
   token, following `docs/guides/release.md`.

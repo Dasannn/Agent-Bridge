@@ -1,6 +1,6 @@
 name: Publish
 
-# Publishes to npm when a version tag (for example v0.1.0) is pushed.
+# Stages the release for the owner's approval when a version tag (for example v0.1.0) is pushed.
 # Uses npm trusted publishing with provenance; see docs/guides/release.md.
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm install -g npm@^11.5.1
+      - run: npm install -g npm@^11.15.0
       - run: npm --version
       - run: npm ci
       - run: npm run lint
@@ -27,4 +27,4 @@ jobs:
       - run: npm test
       - name: Check that the tag matches the package version
         run: test "v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME"
-      - run: npm publish --access public --provenance
+      - run: npm stage publish --access public
