@@ -1,6 +1,11 @@
 # Agent-Bridge
 
-Use your own subscriptions to other coding agents from a cloud coding agent.
+Sign in to OpenCode, Antigravity, Codex, and Claude Code with your own
+subscriptions inside Claude Code on the web or Codex Cloud, through the chat,
+so your cloud agent can delegate to them.
+
+[![npm version](https://img.shields.io/npm/v/cloud-agent-bridge)](https://www.npmjs.com/package/cloud-agent-bridge)
+[![License](https://img.shields.io/npm/l/cloud-agent-bridge)](LICENSE)
 
 Agent-Bridge (`bridge`) runs inside a cloud session of **Claude Code on the
 web** or **Codex Cloud**. It logs other coding-agent CLIs in with your
@@ -124,6 +129,8 @@ which models are available. The agent passes the choice on each delegation
 and keeps it for the rest of the conversation. It never edits the CLIs'
 configuration.
 
+For common problems, see [Troubleshooting](docs/guides/troubleshooting.md).
+
 ## Limits
 
 - **Logins last as long as the cloud session's container.** A new session
@@ -172,6 +179,9 @@ allowing the CLI's hosts, or full access, fixes it.
 Where the home directory is read-only (Codex Cloud), Agent-Bridge keeps the
 CLIs and their logins in the temporary directory (usually
 `/tmp/agent-bridge`), or under `AGENT_BRIDGE_HOME` if you set it.
+
+See [SECURITY.md](SECURITY.md) for the security policy and private vulnerability
+reporting.
 
 ## Commands
 

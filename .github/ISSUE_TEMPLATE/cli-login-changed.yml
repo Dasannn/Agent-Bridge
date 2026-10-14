@@ -1,0 +1,51 @@
+name: CLI login changed
+description: Report a change to a supported CLI's login flow.
+title: "CLI login changed: "
+labels: [cli-change]
+body:
+  - type: dropdown
+    id: cli
+    attributes:
+      label: Which CLI?
+      options:
+        - OpenCode
+        - Antigravity
+        - Codex
+        - Claude Code
+    validations:
+      required: true
+  - type: input
+    id: provider-flags
+    attributes:
+      label: Provider or flags used
+      placeholder: --provider openai, --device
+  - type: input
+    id: cli-version
+    attributes:
+      label: CLI version
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where did it happen?
+      options:
+        - CLI canary workflow
+        - Claude Code on the web
+        - Codex Cloud
+        - local
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output of bridge login ... --json or the canary log
+      description: Remove every login code, callback address, token and email address.
+      render: text
+  - type: checkboxes
+    id: redaction
+    attributes:
+      label: Output redaction
+      options:
+        - label: I removed every login code, callback address, token and email address from the output
+          required: true

@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a problem with Agent-Bridge.
+body:
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: input
+    id: bridge-version
+    attributes:
+      label: bridge --version
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - CLI canary workflow
+        - Claude Code on the web
+        - Codex Cloud
+        - local
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: Remove every login code, callback address, token and email address.
+      render: text
+  - type: checkboxes
+    id: redaction
+    attributes:
+      label: Output redaction
+      options:
+        - label: I removed every login code, callback address, token and email address from the output
+          required: true

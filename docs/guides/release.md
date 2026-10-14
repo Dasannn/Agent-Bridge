@@ -11,6 +11,7 @@ How to publish a version of `cloud-agent-bridge` to npm.
 - [ ] `npm pack --pack-destination /tmp` builds a tarball, and installing it
       in a temporary prefix gives a working `bridge --version`,
       `bridge skill --print`, and `bridge setup` (see Task 5.1).
+- [ ] `CHANGELOG.md` has an entry for the new version.
 - [ ] The work is merged to `main`.
 
 ## One-time npm setup (owner)
@@ -72,7 +73,8 @@ reserves its semver version. To reject the staged release, run
 package's pages.
 
 You can also create the tag from GitHub: Releases → Draft a new release →
-choose a tag `v0.1.0` on `main`. The release notes are the changelog.
+choose a tag `v0.1.0` on `main`. The GitHub release notes can copy the new
+version's entry from `CHANGELOG.md`.
 
 Without the workflow, from a machine with Node.js 20 or later, run from a
 clean clone of `main`:

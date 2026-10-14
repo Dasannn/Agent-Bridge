@@ -463,3 +463,32 @@ Goal: harden publishing and detect changes in the supported CLIs.
 
 - [x] Add a weekly CLI canary for the six supported login cases, checking
       provider URLs and device codes, and update the release guide.
+
+## Phase 7 — Project hygiene
+
+Goal: make the project easier to find, support, and release.
+
+### Task 7.1: README opening and pointers
+
+- [x] Lead with subscription login through cloud-session chat, add npm and
+      license badges, and link troubleshooting and the security policy.
+
+### Task 7.2: Security policy
+
+- [x] Add `SECURITY.md` with supported versions, security boundaries,
+      publishing provenance, private vulnerability reporting, and scope.
+
+### Task 7.3: Issue templates
+
+- [x] Add forms for CLI login changes and bugs, with required output
+      redaction, and a private security reporting link.
+
+### Task 7.4: Changelog and release checklist
+
+- [x] Add `CHANGELOG.md` with Unreleased and versions 0.1.0 to 0.1.2, and
+      update the release checklist to use its entries.
+
+### Task 7.5: Troubleshooting guide
+
+- [x] Gather documented login, network, setup, account, and canary problems
+      in `docs/guides/troubleshooting.md`.
