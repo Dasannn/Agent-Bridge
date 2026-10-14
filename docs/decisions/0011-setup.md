@@ -88,3 +88,25 @@ projects. In that session, without any explanation of Agent-Bridge:
 - It said it would keep the chosen model and effort for the conversation.
 - No permission prompt appeared, so the allow rules written by the setup
   script take effect, as does a probe rule written the same way.
+
+## Verification (Task 4.7, Codex Cloud)
+
+The owner's Codex Cloud environment had internet access enabled with all
+domains allowed. In a new task, the owner asked the agent to:
+
+1. install Agent-Bridge in `/tmp`:
+   `npm_config_cache=/tmp/npm-cache npm install --prefix /tmp/ab "github:..."`;
+2. use `/tmp/ab/node_modules/.bin/bridge` wherever the skill says `bridge`;
+3. follow `bridge skill --print`.
+
+From there, with no errors and no extra explanation:
+
+- It listed the CLIs and left Codex out as the host.
+- It logged in to Claude Code, with the code pasted in the chat.
+- It delegated to Claude Code with `--model sonnet` and `--effort high`.
+- It logged OpenCode in to GitHub Copilot with a device code.
+- It delegated to OpenCode with a Copilot model.
+
+This completes the live login of every supported CLI (plan, Phase 3 exit
+criteria). After release, the Codex Cloud instructions in the README replace
+the Git install with the published package.

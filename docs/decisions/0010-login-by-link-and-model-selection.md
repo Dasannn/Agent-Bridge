@@ -62,7 +62,8 @@ All live runs used the owner's ChatGPT account in portable mode.
   2. `run -m openai/gpt-5.5 --variant high` answered from `AGENTS.md`.
   3. `bridge logout opencode --provider openai` signed out.
   4. `run -m opencode/big-pickle --variant high` also worked with a free model.
-- **Still to verify:** Claude Code's options, from a non-Claude host.
+- **Claude Code:** `--model sonnet` and `--effort high` worked in a delegation
+  from Codex Cloud (decision 0011).
 
 ## Consequences
 
