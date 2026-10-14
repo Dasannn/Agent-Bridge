@@ -109,11 +109,15 @@ models) is reported as ready once installed.
 
 ### FR-4 `login`
 
-`bridge login <agent> [--provider <id>]`:
+`bridge login <agent> [--provider <id>] [--device]`:
 
 - `--provider` selects the provider for multi-provider CLIs such as OpenCode,
   and is required for them. For OpenCode, v1 supports the subscription
   providers ChatGPT (OpenAI) and GitHub Copilot, subject to the spike.
+- ChatGPT logins (Codex, and OpenCode's `openai` provider) open a link by
+  default: after signing in, the user pastes the address the browser could
+  not open. `--device` chooses the device-code login instead, where the CLI
+  offers one.
 - Installs the CLI if missing.
 - If the CLI is already authenticated, says so and exits successfully without
   starting a new login.
@@ -147,9 +151,12 @@ logged out.
 - The agent may be omitted when exactly one login is in progress, so the user
   can finish a login with just `bridge complete "<code>"`. With several logins
   in progress it lists them and asks for the agent.
-- Delivers the user's pasted response to the in-progress login as typed
-  input (paste-code flows). For device-code flows, which need no response,
-  it waits for the login to finish.
+- Delivers the user's pasted response to the in-progress login: a pasted
+  code as typed input (paste-code flows), or a pasted callback address as a
+  request to the CLI's listener on the container's loopback interface
+  (link flows), after checking that it matches the login's redirect address
+  and `state`. For device-code flows, which need no response, it waits for
+  the login to finish.
 - Validates the response before using it. Invalid input is rejected without
   cancelling the login, so the user can paste again.
 - Waits for the login to finish, with a timeout, and verifies the CLI is
@@ -176,6 +183,9 @@ instructs the primary agent to:
   authenticated.
 - Relay Agent-Bridge's messages to the user verbatim.
 - Delegate only when the user explicitly asks, never on its own initiative.
+- Choose the model and reasoning effort the user asks for, using each CLI's
+  own options and model list, and keep the choice for later delegations in
+  the same conversation. It does not write the CLIs' configuration files.
 - Invoke each supported CLI non-interactively, giving it a self-contained
   task, and show the user the result and the resulting changes.
 - Follow the project's workflow when one exists (FR-7).

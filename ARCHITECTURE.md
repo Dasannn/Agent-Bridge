@@ -92,9 +92,10 @@ interface LoginProvider {
   isAuthenticated(): Promise<boolean>;
   logout(): Promise<void>;            // uses the CLI's own logout
   command: string[];                  // login command for this provider
-  input?: string[];                   // keystrokes to pick the provider, if needed
+  keys?: KeyStep[];                   // keystrokes, each sent once its text is drawn
   strategy: StrategyId;
   parsePrompt(output: string): LoginPrompt | undefined;
+  device?: LoginMethod;               // device-code alternative, chosen with --device
 }
 ```
 
@@ -113,10 +114,17 @@ A strategy defines how a pasted response is validated and delivered:
 |---|---|---|
 | `paste-code` | Code shown by the provider | Written to the CLI's stdin |
 | `device-code` | None | Waits for the CLI to finish |
+| `loopback-callback` | Callback address from the browser | Requested from the CLI's listener on `127.0.0.1` |
 
-v1 implements only these two strategies (decisions 0002–0006): `paste-code`
-for Antigravity and Claude Code, and `device-code` for Codex and OpenCode's
-ChatGPT provider.
+`paste-code` serves Antigravity and Claude Code; `loopback-callback` serves
+ChatGPT logins (Codex and OpenCode's `openai` provider), with `device-code`
+as their `--device` alternative; `device-code` also serves GitHub Copilot
+(decisions 0002–0006 and 0010). For `loopback-callback`, the port, path, and
+expected `state` come from the `redirect_uri` and `state` in the login URL
+the CLI prints, so nothing is hard-coded per CLI.
+
+A provider may declare a `device` login method next to its default one. Both
+share the provider's session, so `--device` replaces a login in progress.
 
 ### Session runner (`src/core/session.ts`)
 
