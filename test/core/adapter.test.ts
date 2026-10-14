@@ -20,6 +20,7 @@ function adapter(id: string, providers: LoginProvider[]): Adapter {
     requiresLogin: true,
     providers,
     isInstalled: async () => true,
+    install: async () => {},
     delegationExample: `${id} run`,
   };
 }

@@ -37,6 +37,7 @@ export const adapters = [
     binaries: ["fake"],
     requiresLogin: true,
     isInstalled: async () => true,
+    install: async () => {},
     delegationExample: "fake run",
     providers: [
       provider("paste", "paste-code", "paste-code", pastePrompt),

@@ -35,6 +35,8 @@ export interface Adapter {
   requiresLogin: boolean;
   providers: LoginProvider[];
   isInstalled(env: NodeJS.ProcessEnv): Promise<boolean>;
+  /** Installs the CLI into the Agent-Bridge prefix on the managed PATH. */
+  install(env: NodeJS.ProcessEnv): Promise<void>;
   /** Non-interactive invocation shown in the skill. */
   delegationExample: string;
 }

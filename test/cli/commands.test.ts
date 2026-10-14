@@ -21,6 +21,7 @@ const nodeAdapter: Adapter = {
   requiresLogin: false,
   providers: [],
   isInstalled: async () => true,
+  install: async () => {},
   delegationExample: "node -e ...",
 };
 const claudeAdapter: Adapter = { ...nodeAdapter, id: "claude", displayName: "Claude Code" };
