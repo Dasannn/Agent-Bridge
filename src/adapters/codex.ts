@@ -4,7 +4,7 @@ import { findBinary, npmInstall, runCommand } from "./util.js";
 
 function parsePrompt(screen: string): LoginPrompt | undefined {
   const url = screen.match(/https:\/\/auth\.openai\.com\/codex\/device\b/);
-  const code = screen.match(/one-time code[^\n]*\n\s*([A-Z0-9]{4}-[A-Z0-9]{4,6})\b/);
+  const code = screen.match(/one-time code[^\n]*\n\s*([A-Z0-9]{4}-[A-Z0-9]{4,6})[ \t]*\n/);
   return url && code ? { url: url[0], code: code[1] } : undefined;
 }
 

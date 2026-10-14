@@ -20,6 +20,11 @@ describe("opencode adapter", () => {
     );
   });
 
+  it("parsePrompt waits for the whole code", () => {
+    const partial = `${fixture("opencode-openai.txt").split("WXYZ-12345")[0]}WXYZ-1234`;
+    expect(provider("openai")?.parsePrompt(partial)).toBeUndefined();
+  });
+
   it("reads connected providers from the credentials section only", () => {
     expect(connectedProviders(fixture("opencode-list-openai.txt"))).toEqual(["OpenAI"]);
     expect(connectedProviders(fixture("opencode-list-env-only.txt"))).toEqual([]);

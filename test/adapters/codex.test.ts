@@ -18,6 +18,11 @@ describe("codex adapter", () => {
     expect(provider.parsePrompt(partial)).toBeUndefined();
   });
 
+  it("parsePrompt waits for the whole code", () => {
+    const partial = `${fixture.split("WXYZ-12345")[0]}WXYZ-1234`;
+    expect(provider.parsePrompt(partial)).toBeUndefined();
+  });
+
   it("metadata matches decision 0005", () => {
     expect(codex.id).toBe("codex");
     expect(codex.binaries).toEqual(["codex"]);

@@ -5,7 +5,7 @@ import { findBinary, npmInstall, runCommand, stripAnsi } from "./util.js";
 
 function parsePrompt(screen: string): LoginPrompt | undefined {
   const url = screen.match(/Go to:\s*(https:\/\/\S+)/);
-  const code = screen.match(/Enter code:\s*([A-Z0-9]{4}-[A-Z0-9]{4,6})\b/);
+  const code = screen.match(/Enter code:\s*([A-Z0-9]{4}-[A-Z0-9]{4,6})[ \t]*\n/);
   return url && code ? { url: url[1], code: code[1] } : undefined;
 }
 
