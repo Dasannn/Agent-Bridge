@@ -36,7 +36,7 @@ Interfaces that later phases rely on (beyond the Phase 2 plan):
 - `Terminal.kill(): Promise<void>` stops the CLI's process group (SIGTERM,
   then SIGKILL) and waits for it to be reaped.
 - Session state includes `cliPid`.
-- `AGENT_BRIDGE_PROMPT_TIMEOUT_MS` overrides the 30-second prompt timeout.
+- `AGENT_BRIDGE_PROMPT_TIMEOUT_MS` overrides the prompt timeout (90 seconds by default).
 
 Deferred minor findings (Phase 2 review): no lock against two simultaneous
 logins; a runner idles for 20 minutes if its CLI dies after the prompt; `run`
@@ -81,12 +81,12 @@ Global constraints for this phase:
   without separators, for URLs that TUIs break across lines.
 - `Adapter` gains `install(env: NodeJS.ProcessEnv): Promise<void>`.
 
-- [ ] Tests: `findBinary finds an executable on PATH and ignores
+- [x] Tests: `findBinary finds an executable on PATH and ignores
       non-executables`; `runCommand returns code and output`; `runCommand
       times out with 124`; `stripAnsi removes colour codes`; `joinedScreen
       rebuilds a URL split across lines`. (`npmInstall` is exercised in
       Task 3.6.)
-- [ ] Run, fail, implement, green, commit.
+- [x] Run, fail, implement, green, commit.
 
 ### Task 3.2: Antigravity adapter
 
@@ -99,17 +99,17 @@ login command `["agy"]` with `keys: ["\r"]` (selects `1. Google OAuth`);
 strategy `paste-code`; `isAuthenticated`: `agy models` exits `0`;
 delegation example `bridge run agy -- -p "<task>" --output-format json --dangerously-skip-permissions`.
 
-- [ ] Capture `agy-login.txt` from a logged-out `agy` (portable home)
+- [x] Capture `agy-login.txt` from a logged-out `agy` (portable home)
       after the menu key, and replace secrets with placeholders.
-- [ ] Tests: `parsePrompt extracts the full OAuth URL from the fixture`
+- [x] Tests: `parsePrompt extracts the full OAuth URL from the fixture`
       (starts with `https://accounts.google.com/o/oauth2/auth?`, contains
       `redirect_uri=https%3A%2F%2Fantigravity.google%2Foauth-callback`, ends
       with the `state` placeholder); `parsePrompt returns undefined before the
       URL is drawn` (menu screen); `metadata matches decision 0003`.
-- [ ] Find and record Antigravity's logout mechanism (the TUI `/logout` is
+- [x] Find and record Antigravity's logout mechanism (the TUI `/logout` is
       known); implement `logout` with it and verify against
       `isAuthenticated`.
-- [ ] Run, fail, implement, green, commit.
+- [x] Run, fail, implement, green, commit.
 
 ### Task 3.3: Codex adapter
 
@@ -122,8 +122,8 @@ URL `https://auth.openai.com/codex/device` and a code like `XXXX-XXXXX`;
 `isAuthenticated`: `codex login status` exits `0`; logout `codex logout`;
 delegation example `bridge run codex -- exec "<task>" --json --skip-git-repo-check`.
 
-- [ ] Capture the fixture; tests for URL and code extraction and metadata.
-- [ ] Run, fail, implement, green, commit.
+- [x] Capture the fixture; tests for URL and code extraction and metadata.
+- [x] Run, fail, implement, green, commit.
 
 ### Task 3.4: Claude Code adapter
 
@@ -137,11 +137,13 @@ strategy `paste-code`; URL after `visit:` (keep `code=true` intact);
 `claude auth logout`; delegation example
 `bridge run claude -- -p "<task>" --output-format json`.
 
-- [ ] Capture the fixture in an isolated `CLAUDE_CONFIG_DIR` without the host
-      session's credentials, and record which environment variables must be
-      removed so a child `claude` does not inherit the host login.
-- [ ] Tests for URL extraction (with `code=true` preserved) and metadata.
-- [ ] Run, fail, implement, green, commit.
+- [x] Capture the fixture in an isolated `CLAUDE_CONFIG_DIR` without the host
+      session's credentials.
+- [ ] Record which environment variables (for example `ANTHROPIC_API_KEY`,
+      `CLAUDE_CODE_OAUTH_TOKEN`) make a child `claude` report a login it did
+      not get through Agent-Bridge. Needs a non-Claude host; open.
+- [x] Tests for URL extraction (with `code=true` preserved) and metadata.
+- [x] Run, fail, implement, green, commit.
 
 ### Task 3.5: OpenCode adapter
 
@@ -159,28 +161,34 @@ stripped, names the provider; logout `opencode providers logout`, with the
 exact argument confirmed here; delegation example
 `bridge run opencode -- run "<task>" --format json`.
 
-- [ ] Capture the OpenAI headless fixture; tests for URL and code
+- [x] Capture the OpenAI headless fixture; tests for URL and code
       extraction, provider ids, and metadata.
-- [ ] Run, fail, implement, green, commit.
+- [x] Run, fail, implement, green, commit.
 
 ### Task 3.6: Install on login and live verification
 
 **Files:** Modify `src/cli/commands.ts`; Test `test/cli/commands.test.ts`.
 
-- [ ] Test and implement: `login` calls `adapter.install` when the CLI is
+- [x] Test and implement: `login` calls `adapter.install` when the CLI is
       missing, and reports an install failure with npm's or the script's
       output.
-- [ ] Live, in a cloud container, for each adapter: `bridge login` shows the
+- [ ] Live, in a cloud container, for each adapter (see decision 0009 for
+      what was verified; Codex and OpenCode subscription logins pending): `bridge login` shows the
       prompt; `bridge status` reports correctly; `bridge run` delegates a
       one-line task. Repeat the Antigravity login with the owner end to end,
       once with a normal home and once in portable mode (`HOME` pointed at a
       non-writable path), and verify each CLI honours the portable home
       variables (spec remaining question 4).
-- [ ] Record results in `docs/decisions/0009-adapter-verification.md`.
+- [x] Record results in `docs/decisions/0009-adapter-verification.md`.
 
 ### Task 3.7: Phase 3 review
 
-- [ ] Confirm the Phase 3 exit criteria in `docs/plan.md`.
-- [ ] Whole-branch review by a fresh reviewer.
+- [x] Confirm the Phase 3 exit criteria in `docs/plan.md`.
+- [x] Whole-branch review by a fresh reviewer. Important findings fixed with
+      regression tests: timed-out commands left their children running and
+      hung; the Antigravity logout read stale scrollback; a code placed before
+      the agent name could be echoed. Deferred minor findings: `finishLogin`
+      can overrun its deadline by one slow status check; a failed Antigravity
+      logout reports no screen output.
 - [ ] Write the Phase 4 tasks (skill and setup) and present them for
       approval.
