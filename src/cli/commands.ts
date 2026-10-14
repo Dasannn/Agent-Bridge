@@ -19,6 +19,9 @@ interface Context {
   cliEnv: NodeJS.ProcessEnv;
 }
 
+const NETWORK_HINT =
+  "If the CLI could not reach its provider, the environment's network policy may need to allow the provider's hosts.";
+
 const HOST_NAMES = { claude: "Claude Code", codex: "Codex" } as const;
 
 const fail = (message: string, data?: Record<string, unknown>): CommandResult => ({
@@ -149,10 +152,13 @@ export async function login(
     env: ctx.cliEnv,
     runnerPath: deps.runnerPath,
     adapterModule: deps.adapterModule,
+    promptTimeoutMs: Number(deps.env.AGENT_BRIDGE_PROMPT_TIMEOUT_MS) || undefined,
   });
   if (!result.ok) {
     const screen = result.screen ? `\n\nLast output from the CLI:\n${mask(result.screen)}` : "";
-    return fail(`Could not start the ${adapter.displayName} login: ${result.error}${screen}`);
+    return fail(
+      `Could not start the ${adapter.displayName} login: ${result.error}${screen}\n\n${NETWORK_HINT}`,
+    );
   }
 
   const flag = providerFlag(adapter, provider);

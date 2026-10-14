@@ -134,6 +134,13 @@ describe("login and complete", () => {
     expect(out.stderr).toContain("bridge login fake");
   });
 
+  it("explains a login that shows no prompt, including the network hint", async () => {
+    const { out, run } = setup({ AGENT_BRIDGE_PROMPT_TIMEOUT_MS: "500" });
+    expect(await run("login", "fake", "--provider", "silent")).toBe(1);
+    expect(out.stderr).toMatch(/no login prompt/i);
+    expect(out.stderr).toMatch(/network policy/i);
+  });
+
   it("refuses an agent that is not installed", async () => {
     const { out, run } = setup();
     expect(await run("login", "missing")).toBe(1);
