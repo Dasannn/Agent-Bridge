@@ -171,6 +171,32 @@ describe("login and complete", () => {
     expect(out.stderr).not.toContain("GOOD-CODE");
   });
 
+  it("accepts the code before the agent name", async () => {
+    const { run } = setup();
+    await run("login", "fake", "--provider", "paste");
+    expect(await run("complete", "GOOD-CODE", "fake")).toBe(0);
+  });
+
+  it("completes a named agent's only login without --provider", async () => {
+    const { run } = setup();
+    await run("login", "fake", "--provider", "paste");
+    expect(await run("complete", "fake", "GOOD-CODE")).toBe(0);
+  });
+
+  it("completes the only login of a provider named without an agent", async () => {
+    const { run } = setup();
+    await run("login", "fake", "--provider", "paste");
+    expect(await run("complete", "--provider", "paste", "GOOD-CODE")).toBe(0);
+  });
+
+  it("does not echo a code next to an unknown agent", async () => {
+    const { out, run } = setup();
+    expect(await run("complete", "nope", "SECRET-CODE-1")).toBe(1);
+    expect(await run("complete", "SECRET-CODE-2", "nope")).toBe(1);
+    expect(out.stderr).toMatch(/unknown agent/i);
+    expect(out.stderr).not.toContain("SECRET-CODE");
+  });
+
   it("complete without agent or login explains the next step", async () => {
     const { out, run } = setup();
     expect(await run("complete", "SOME-CODE")).toBe(1);

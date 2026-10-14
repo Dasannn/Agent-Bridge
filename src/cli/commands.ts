@@ -181,28 +181,23 @@ export async function login(
   };
 }
 
-/** Finds the only login in progress, for `bridge complete "<code>"` without an agent. */
-async function onlyLoginInProgress(
+/** Logins in progress, optionally limited to one agent or provider. */
+async function loginsInProgress(
   ctx: Context,
-): Promise<{ adapter: Adapter; provider: LoginProvider } | CommandResult> {
+  agent: string | undefined,
+  providerId: string | undefined,
+): Promise<Array<{ adapter: Adapter; provider: LoginProvider }>> {
   const found: Array<{ adapter: Adapter; provider: LoginProvider }> = [];
   for (const adapter of ctx.deps.registry.list()) {
+    if (agent !== undefined && adapter.id !== agent) continue;
     for (const provider of adapter.providers) {
+      if (providerId !== undefined && provider.id !== providerId) continue;
       if (await loginInProgress(adapter.id, provider.id, ctx.home)) {
         found.push({ adapter, provider });
       }
     }
   }
-  if (found.length === 1) return found[0];
-  if (found.length === 0) {
-    return fail("No login is in progress. Run `bridge login <agent>` first.");
-  }
-  const names = found
-    .map(({ adapter, provider }) => `${adapter.id}${providerFlag(adapter, provider)}`)
-    .join(", ");
-  return fail(
-    `Several logins are in progress (${names}). Name one: bridge complete <agent> [--provider <id>] "<code>".`,
-  );
+  return found;
 }
 
 export async function complete(
@@ -212,24 +207,41 @@ export async function complete(
   response?: string,
 ): Promise<CommandResult> {
   const ctx = context(deps);
-  // `bridge complete "<code>"`: a single argument that is not an agent is the response.
-  if (agent !== undefined && response === undefined && !deps.registry.get(agent)) {
-    response = agent;
-    agent = undefined;
+  const isAgent = (id: string | undefined) => id !== undefined && !!deps.registry.get(id);
+  // Accept `complete "<code>"` and `complete "<code>" <agent>` as well. An unknown
+  // agent next to a code is never echoed, because it may be the code.
+  if (agent !== undefined && !isAgent(agent)) {
+    if (isAgent(response)) [agent, response] = [response, agent];
+    else if (response === undefined) [agent, response] = [undefined, agent];
+    else {
+      const known = deps.registry
+        .list()
+        .map((a) => a.id)
+        .join(", ");
+      return fail(`Unknown agent. Known agents: ${known}.`);
+    }
   }
+  const matches = await loginsInProgress(ctx, agent, providerId);
   let adapter: Adapter;
   let provider: LoginProvider;
-  if (agent === undefined && providerId === undefined) {
-    const only = await onlyLoginInProgress(ctx);
-    if (isResult(only)) return only;
-    ({ adapter, provider } = only);
-  } else {
+  if (matches.length === 1) {
+    ({ adapter, provider } = matches[0]);
+  } else if (agent !== undefined) {
     const foundAdapter = findAdapter(ctx, agent);
     if (isResult(foundAdapter)) return foundAdapter;
     const foundProvider = findProvider(ctx, foundAdapter, providerId);
     if (isResult(foundProvider)) return foundProvider;
     adapter = foundAdapter;
     provider = foundProvider;
+  } else if (matches.length === 0) {
+    return fail("No login is in progress. Run `bridge login <agent>` first.");
+  } else {
+    const names = matches
+      .map(({ adapter, provider }) => `${adapter.id}${providerFlag(adapter, provider)}`)
+      .join(", ");
+    return fail(
+      `Several logins are in progress (${names}). Name one: bridge complete <agent> [--provider <id>] "<code>".`,
+    );
   }
   const secrets = response ? [response, response.trim()] : [];
 
