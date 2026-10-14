@@ -35,5 +35,8 @@ does not pass `registry-url` to `actions/setup-node`, whose generated
 - Provenance is generated automatically and shown on npm.
 - The runner needs npm 11.15.0 or later and Node.js 22.14.0 or later.
 - The first trusted release verifies the setup end to end.
+- The first staged release, 0.1.2, was approved from the terminal and
+  published with provenance on 2026-10-14; 0.1.1 was never published (its
+  tag predates the switch to staged publishing).
 - After it succeeds, the owner deletes the old repository secret and npm
   token, following `docs/guides/release.md`.
