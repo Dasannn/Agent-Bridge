@@ -1,6 +1,6 @@
 # 0011: Setup in Cloud Environments
 
-- Status: Accepted (Claude Code on the web verified by probe; full run in Task 4.7)
+- Status: Accepted
 - Date: 2026-10-14
 
 ## Context
@@ -69,3 +69,22 @@ build and runs no `prepare` step.
   ln -sf /opt/agent-bridge/node_modules/.bin/bridge /usr/local/bin/bridge
   bridge setup --agents opencode,agy,codex
   ```
+
+## Verification (Task 4.7, Claude Code on the web)
+
+The owner opened a new session in an environment whose setup script was the
+pre-release script above (`--agents opencode,agy,codex`), on one of their own
+projects. In that session, without any explanation of Agent-Bridge:
+
+- The agent used the skill to list the CLIs. It reported OpenCode as ready
+  without a login, Antigravity and Codex as not connected, and left Claude
+  Code out as the host.
+- It started the Antigravity login and relayed the message. The owner
+  finished it with `/bridge-code <code>`.
+- It delegated to Antigravity with effort `high`, and to OpenCode with a
+  free model it chose (`opencode/nemotron-3-ultra-free`).
+- It checked `git status` after each delegation and said which parts of the
+  result it had not verified itself.
+- It said it would keep the chosen model and effort for the conversation.
+- No permission prompt appeared, so the allow rules written by the setup
+  script take effect, as does a probe rule written the same way.
