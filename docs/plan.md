@@ -85,7 +85,9 @@ host-agent detection, using the spike's decisions
 and fixtures.
 
 Exit criteria: adapter tests pass against recorded fixtures, and a manual
-login of each CLI succeeds in a cloud session.
+login of each CLI succeeds in a cloud session. Logins the Claude Code on the
+web sandbox cannot run (Claude Code as host, GitHub through its proxy) are
+completed from Codex Cloud in Phase 4.
 
 ### Phase 4 — Skill and setup
 

@@ -172,8 +172,9 @@ exact argument confirmed here; delegation example
 - [x] Test and implement: `login` calls `adapter.install` when the CLI is
       missing, and reports an install failure with npm's or the script's
       output.
-- [ ] Live, in a cloud container, for each adapter (see decision 0009 for
-      what was verified; Codex and OpenCode subscription logins pending): `bridge login` shows the
+- [x] Live, in a cloud container, for each adapter (decisions 0009 and
+      0010). Claude Code, GitHub Copilot, and OpenCode's ChatGPT login move
+      to Task 4.7, from Codex Cloud: `bridge login` shows the
       prompt; `bridge status` reports correctly; `bridge run` delegates a
       one-line task. Repeat the Antigravity login with the owner end to end,
       once with a normal home and once in portable mode (`HOME` pointed at a
@@ -190,5 +191,158 @@ exact argument confirmed here; delegation example
       the agent name could be echoed. Deferred minor findings: `finishLogin`
       can overrun its deadline by one slow status check; a failed Antigravity
       logout reports no screen output.
-- [ ] Write the Phase 4 tasks (skill and setup) and present them for
+- [x] Write the Phase 4 tasks (skill and setup) and present them for
+      approval.
+
+## Phase 4 — Skill and setup
+
+Goal: one command in an environment's setup script (Claude Code on the web),
+or one command in a task (Codex Cloud), gives the primary agent the skill,
+the CLIs, and the permissions it needs, so the user can connect and delegate
+by asking in plain words.
+
+Global constraints for this phase:
+
+- The skill is English, short, and defers messages and per-flow details to
+  Agent-Bridge's own output (FR-6).
+- Nothing is written into the user's repository except by `bridge skill
+  --repo` (constitution principle 4, FR-6a).
+- Settings files are merged, never replaced; a file that cannot be parsed is
+  left untouched and reported.
+- Every write is tested against a temporary `HOME`.
+
+### Task 4.1: Spike — setup-time facts
+
+Answer before building `setup`; record in
+`docs/decisions/0011-setup.md`.
+
+- [ ] Which environment variables a Claude Code on the web setup script
+      sees, and whether any identifies the host before the agent starts. If
+      none does, `setup` takes `--host claude|codex` and detects it
+      otherwise (FR-2).
+- [ ] The current Claude Code permission rule syntax for a command and its
+      arguments (`Bash(bridge:*)` or `Bash(bridge *)`), checked against the
+      Claude Code documentation and a fresh session (spec remaining
+      question 2).
+- [ ] Whether a user command in `~/.claude/commands/bridge-code.md` with
+      `allowed-tools` and a `!` command line runs `bridge complete
+      $ARGUMENTS` without a permission prompt, or whether the same must be a
+      user skill.
+- [ ] Whether `npx -y github:dasannn/agent-bridge#<branch>` builds the
+      package (a `prepare` script), so it can be tested before release.
+
+### Task 4.2: Skill content
+
+**Files:** Create `skill/SKILL.md`, `src/core/skill.ts`; Test
+`test/core/skill.test.ts`. Modify `src/core/adapter.ts` and the adapters.
+
+- [ ] `Adapter` gains `models: { list: string; model: string; effort: string }`
+      with each CLI's options from decision 0010.
+- [ ] `skill/SKILL.md` covers:
+  - connecting a CLI: `status`, `login` (including `--device`), and
+    relaying the message verbatim;
+  - finishing with `bridge complete "<code or address>"`;
+  - that a container restart cancels a pending login;
+  - switching accounts with `logout` and `login`;
+  - delegating only on explicit request, never to the host agent, through
+    `bridge run`;
+  - choosing the model and effort, and keeping the choice for the
+    conversation;
+  - the project workflow rules (FR-7);
+  - never asking for API keys or pasting secrets.
+- [ ] A generated section lists, per adapter, the delegation example and the
+      model and effort options. `npm run build` regenerates it, and a test
+      fails when the committed file is stale.
+- [ ] Tests:
+  - every adapter appears in the generated section;
+  - the skill has a valid `name` and `description` front matter;
+  - the skill stays under a size budget (about 150 lines).
+
+### Task 4.3: `bridge skill --print` and `--repo`
+
+**Files:** Modify `src/cli/main.ts`, `src/cli/commands.ts`; Test
+`test/cli/skill.test.ts`.
+
+- [ ] `--print` writes the skill to stdout.
+- [ ] `--repo` writes `.agents/skills/agent-bridge/SKILL.md` at the root of
+      the current Git repository:
+  - It overwrites only a file that carries Agent-Bridge's marker, and
+    refuses otherwise.
+  - It fails clearly outside a repository.
+  - It never runs Git.
+  - It tells the user to review and commit the file.
+- [ ] Tests for each case, including that no other file is created.
+
+### Task 4.4: Permissions
+
+**Files:** Create `src/core/permissions.ts`; Test
+`test/core/permissions.test.ts`.
+
+- [ ] Build allow rules, with the syntax from Task 4.1, for `agent-bridge`,
+      `bridge`, and each listed adapter's `binaries`.
+- [ ] Merge them into `~/.claude/settings.json`:
+  - adds only missing rules and preserves every other key;
+  - creates the file when it does not exist;
+  - writes through a temporary file and a rename;
+  - leaves an unparsable file untouched and reports it.
+- [ ] Tests for each of those cases and for running twice (idempotent).
+
+### Task 4.5: `/bridge-code` command
+
+**Files:** Create `skill/bridge-code.md`; Modify `src/core/skill.ts`; Test
+`test/core/skill.test.ts`.
+
+- [ ] The command runs `bridge complete` with its arguments and needs no
+      model turn beyond showing the result, in the form chosen in Task 4.1
+      (FR-6b).
+- [ ] Installed next to the skill, only for Claude Code.
+
+### Task 4.6: `bridge setup`
+
+**Files:** Create `src/cli/setup.ts`; Modify `src/cli/main.ts`; Test
+`test/cli/setup.test.ts`.
+
+`bridge setup --agents <list> [--host claude|codex] [--no-permissions]`:
+
+- [ ] Skips the host agent, and installs each other listed CLI if missing.
+- [ ] Claude Code: installs the skill to `~/.claude/skills/agent-bridge/`
+      and the `/bridge-code` command, and grants permissions unless
+      `--no-permissions` is given.
+- [ ] Codex: skips skill and permissions, and says to use `bridge skill
+      --print` or `--repo`.
+- [ ] Prints one line per step with its outcome and exits non-zero if any
+      step failed.
+- [ ] Is safe to run again.
+- [ ] Tests with fake adapters and a temporary `HOME`, covering:
+  - the host being skipped;
+  - an install failure, where the other steps still run and the exit code
+    is non-zero;
+  - `--no-permissions`;
+  - running twice;
+  - Codex mode.
+
+### Task 4.7: Live verification
+
+- [ ] Claude Code on the web: a new session whose setup script runs
+      `npx -y github:dasannn/agent-bridge#<branch> setup --agents
+      opencode,agy,codex`. Check that:
+  - the skill and `/bridge-code` are loaded;
+  - no permission prompt appears;
+  - the user connects a CLI and delegates a task by asking in plain words,
+    choosing a model and effort;
+  - the delegation respects a project's SDD workflow.
+- [ ] Codex Cloud: in a task, run `bridge skill --print`, then connect and
+      delegate. Verify the remaining live logins with the owner:
+  - Claude Code;
+  - GitHub Copilot through OpenCode;
+  - OpenCode's ChatGPT login by link;
+  - the Codex effort option, where the host allows.
+- [ ] Record the results in `docs/decisions/0011-setup.md`.
+
+### Task 4.8: Phase 4 review
+
+- [ ] Confirm the Phase 4 exit criteria in `docs/plan.md`.
+- [ ] Whole-branch review by a fresh reviewer; fix Critical and Important
+      findings.
+- [ ] Write the Phase 5 tasks (README and release) and present them for
       approval.
