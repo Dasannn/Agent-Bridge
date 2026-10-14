@@ -170,8 +170,8 @@ allowing the CLI's hosts, or full access, fixes it.
   Agent-Bridge answers them with data sharing with Google turned **off**.
 
 Where the home directory is read-only (Codex Cloud), Agent-Bridge keeps the
-CLIs and their logins under `/tmp/agent-bridge`, or under
-`AGENT_BRIDGE_HOME` if you set it.
+CLIs and their logins in the temporary directory (usually
+`/tmp/agent-bridge`), or under `AGENT_BRIDGE_HOME` if you set it.
 
 ## Commands
 

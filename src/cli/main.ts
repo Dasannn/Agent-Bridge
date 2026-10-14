@@ -98,7 +98,8 @@ export async function main(
   } catch (error) {
     // Unexpected failures are reported like any other result, with secrets masked.
     const detail = error instanceof Error ? error.message : String(error);
-    return emit({ ok: false, message: `bridge ${command} failed: ${mask(detail)}` });
+    const pasted = [response, passthrough[0]].filter((value): value is string => Boolean(value));
+    return emit({ ok: false, message: `bridge ${command} failed: ${mask(detail, pasted)}` });
   }
 
   async function dispatch(): Promise<number> {

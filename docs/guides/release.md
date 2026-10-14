@@ -20,7 +20,10 @@ How to publish a version of `cloud-agent-bridge` to npm.
 2. Create a **granular access token**: Account → Access Tokens → Generate
    New Token → Granular Access Token. Give it read and write permission on
    packages; before the first release, use "All packages", because
-   `cloud-agent-bridge` does not exist yet. Set an expiry date.
+   `cloud-agent-bridge` does not exist yet. Set an expiry date. If your
+   account requires two-factor authentication for publishing, also tick
+   **Bypass two-factor authentication** on the token; otherwise the workflow
+   fails with `EOTP`.
 3. In the GitHub repository, add it as a secret: Settings → Secrets and
    variables → Actions → New repository secret, named `NPM_TOKEN`.
 

@@ -16,6 +16,8 @@ export interface SessionState {
   strategy: StrategyId;
   prompt: LoginPrompt;
   startedAt: string;
+  /** Set when the CLI ended before `complete`; the runner only holds its result. */
+  finished?: boolean;
 }
 
 export interface RunnerConfig {
@@ -83,12 +85,22 @@ function liveState(home: BridgeHome, agent: string, provider: string): SessionSt
   return state;
 }
 
-export async function loginInProgress(
+/** True while a runner holds this login, in progress or finished but not yet collected. */
+export async function loginPending(
   agent: string,
   provider: string,
   home: BridgeHome,
 ): Promise<boolean> {
   return liveState(home, agent, provider) !== undefined;
+}
+
+export async function loginInProgress(
+  agent: string,
+  provider: string,
+  home: BridgeHome,
+): Promise<boolean> {
+  const state = liveState(home, agent, provider);
+  return state !== undefined && !state.finished;
 }
 
 export async function cancelLogin(

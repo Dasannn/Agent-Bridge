@@ -6,7 +6,7 @@ import { type Adapter, type LoginProvider, loginMethod, type Registry } from "..
 import { detectHost } from "../core/host.js";
 import { type CommandResult, mask } from "../core/output.js";
 import { type BridgeHome, managedEnv, resolveHome } from "../core/paths.js";
-import { completeLogin, loginInProgress, startLogin } from "../core/session.js";
+import { completeLogin, loginInProgress, loginPending, startLogin } from "../core/session.js";
 import { isAgentBridgeSkill, readSkill } from "../core/skill.js";
 import { callbackTarget } from "../core/strategies.js";
 
@@ -215,7 +215,7 @@ async function loginsInProgress(
     if (agent !== undefined && adapter.id !== agent) continue;
     for (const provider of adapter.providers) {
       if (providerId !== undefined && provider.id !== providerId) continue;
-      if (await loginInProgress(adapter.id, provider.id, ctx.home)) {
+      if (await loginPending(adapter.id, provider.id, ctx.home)) {
         found.push({ adapter, provider });
       }
     }

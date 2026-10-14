@@ -298,8 +298,8 @@ describe("login by link", () => {
     );
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(await run("complete", address)).toBe(1);
-    // Either the runner noticed first (no login left) or the delivery failed.
-    expect(out.stderr).toMatch(/no longer waiting|no login is in progress/i);
+    // Either the runner saw the CLI exit first, or the delivery failed.
+    expect(out.stderr).toMatch(/no longer waiting|login failed/i);
   });
 
   it("accepts --device for a login that already uses a device code", async () => {
@@ -467,7 +467,16 @@ describe("a CLI that exits before complete", () => {
     await run("status", "fake", "--json");
     expect(providers(out.stdout).quits).toBe("not authenticated");
     expect(await run("complete", "fake", "--provider", "quits", "GOOD-CODE")).toBe(1);
-    expect(out.stderr).toMatch(/no fake cli login is in progress/i);
+    expect(out.stderr).toMatch(/login failed/i);
+    expect(out.stderr).toContain("bridge login fake --provider quits");
+  });
+
+  it("shows the CLI's error when a device-code login fails before complete", async () => {
+    const { out, run } = setup();
+    expect(await run("login", "fake", "--provider", "denied")).toBe(0);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    expect(await run("complete")).toBe(1);
+    expect(out.stderr).toContain("Denied");
   });
 
   it("reports a login finished early as authenticated, and complete confirms it", async () => {

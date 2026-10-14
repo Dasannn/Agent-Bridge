@@ -439,8 +439,12 @@ Fix with tests, or record why not:
 
 ### Task 5.5: Phase 5 review
 
-- [ ] Confirm that every acceptance criterion in `docs/spec.md` is met, with
-      a pointer to its evidence.
-- [ ] Whole-branch review by a fresh reviewer; fix Critical and Important
-      findings.
-- [ ] Hand the release checklist to the owner.
+- [x] Confirm that every acceptance criterion in `docs/spec.md` is met, with
+      a pointer to its evidence (decision 0012).
+- [x] Whole-branch review by a fresh reviewer: go, no Critical findings.
+      Fixed: a login whose CLI fails before `complete` (an expired device
+      code, a denied sign-in) now reports the CLI's error instead of
+      vanishing. Minor findings fixed or noted; the double Ctrl-C with a
+      real terminal and unbounded status checks on exit paths remain, as
+      harmless in cloud sessions.
+- [x] Hand the release checklist to the owner.

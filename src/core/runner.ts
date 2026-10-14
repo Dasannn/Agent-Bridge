@@ -151,29 +151,32 @@ async function main(): Promise<void> {
   let lingering: NodeJS.Timeout | undefined;
   const idle = setTimeout(() => void shutdown(0), config.idleTimeoutMs);
 
-  // A CLI may exit before anyone runs `complete`: it gave up, or a device-code
-  // login finished on its own. Keep a success for `complete`; end a failure.
-  terminal.exited.then(async (code) => {
-    if (result) return;
-    const ok = code === 0 && (await provider.isAuthenticated(env));
-    if (result) return;
-    if (ok) {
-      result = Promise.resolve({ status: "done", ok: true, message: "Signed in." });
-    } else {
-      await shutdown(0);
-    }
+  const failure = (code: number, secrets: string[] = []): CompleteResult => ({
+    status: "done",
+    ok: false,
+    message: `Login failed (exit code ${code}).\n${tail(terminal.screen(), secrets)}`,
   });
+
+  // A CLI may exit before anyone runs `complete`: it gave up, the code expired,
+  // or a device-code login finished on its own. Keep that outcome for
+  // `complete`, and mark the session finished so `status` stops reporting it.
+  function watchEarlyExit(): void {
+    terminal.exited.then(async (code) => {
+      if (result) return;
+      const ok = code === 0 && (await provider.isAuthenticated(env));
+      if (result) return;
+      result = Promise.resolve(
+        ok ? { status: "done" as const, ok: true, message: "Signed in." } : failure(code),
+      );
+      writeFileSync(paths.state, JSON.stringify({ ...state, finished: true }), { mode: 0o600 });
+    });
+  }
 
   /**
    * Waits until the CLI exits or reports a signed-in account. Some CLIs
    * (Antigravity) stay open after a successful login, so exiting is not required.
    */
   async function finishLogin(timeoutMs: number, secrets: string[]): Promise<CompleteResult> {
-    const failure = (code: number): CompleteResult => ({
-      status: "done",
-      ok: false,
-      message: `Login failed (exit code ${code}).\n${tail(terminal.screen(), secrets)}`,
-    });
     try {
       const deadline = Date.now() + timeoutMs;
       while (Date.now() < deadline) {
@@ -186,7 +189,7 @@ async function main(): Promise<void> {
         if (code !== undefined) {
           return code === 0 && (await provider.isAuthenticated(env))
             ? { status: "done", ok: true, message: "Signed in." }
-            : failure(code);
+            : failure(code, secrets);
         }
         // A status check may be slow; never let it run past the deadline.
         const signedIn = await Promise.race([
@@ -312,6 +315,7 @@ async function main(): Promise<void> {
   server.listen(paths.socket, () => {
     writeFileSync(paths.state, JSON.stringify(state), { mode: 0o600 });
     report({ ok: true, prompt });
+    watchEarlyExit();
   });
 }
 
