@@ -30,11 +30,23 @@ const missingAdapter: Adapter = {
   id: "missing",
   requiresLogin: true,
   isInstalled: async () => false,
+  install: async () => {
+    throw new Error("npm could not install missing-cli:\nE404 Not Found");
+  },
+};
+let lateInstalled = false;
+// Same id as the fake adapter, because the session runner loads it by id.
+const lateAdapter: Adapter = {
+  ...fake,
+  isInstalled: async () => lateInstalled,
+  install: async () => {
+    lateInstalled = true;
+  },
 };
 
 const envs: NodeJS.ProcessEnv[] = [];
 
-function setup(extra: NodeJS.ProcessEnv = {}) {
+function setup(extra: NodeJS.ProcessEnv = {}, adapters?: Adapter[]) {
   const dir = mkdtempSync(join(tmpdir(), "ab-cmd-"));
   const env: NodeJS.ProcessEnv = {
     PATH: process.env.PATH,
@@ -54,7 +66,7 @@ function setup(extra: NodeJS.ProcessEnv = {}) {
   };
   const deps: Parameters<Main>[2] = {
     env,
-    registry: createRegistry([fake, nodeAdapter, claudeAdapter, missingAdapter]),
+    registry: createRegistry(adapters ?? [fake, nodeAdapter, claudeAdapter, missingAdapter]),
     runnerPath,
     adapterModule,
   };
@@ -148,10 +160,19 @@ describe("login and complete", () => {
     expect(out.stderr).toMatch(/network policy/i);
   });
 
-  it("refuses an agent that is not installed", async () => {
+  it("reports an install failure with the installer's output", async () => {
     const { out, run } = setup();
     expect(await run("login", "missing")).toBe(1);
-    expect(out.stderr).toMatch(/not installed/i);
+    expect(out.stderr).toMatch(/could not install/i);
+    expect(out.stderr).toContain("E404 Not Found");
+  });
+
+  it("installs a missing CLI before logging in", async () => {
+    lateInstalled = false;
+    const { out, run } = setup({}, [lateAdapter]);
+    expect(await run("login", "fake", "--provider", "device")).toBe(0);
+    expect(lateInstalled).toBe(true);
+    expect(out.stdout).toContain("ABCD-1234");
   });
 });
 

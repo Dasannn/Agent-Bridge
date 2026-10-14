@@ -135,9 +135,12 @@ export async function login(
   const refusal = hostRefusal(ctx, adapter);
   if (refusal) return refusal;
   if (!(await adapter.isInstalled(ctx.cliEnv))) {
-    return fail(
-      `${adapter.displayName} is not installed. Run \`bridge setup --agents ${adapter.id}\`.`,
-    );
+    try {
+      await adapter.install(ctx.cliEnv);
+    } catch (error) {
+      const detail = mask(error instanceof Error ? error.message : String(error));
+      return fail(`Could not install ${adapter.displayName}.\n${detail}\n\n${NETWORK_HINT}`);
+    }
   }
   const provider = findProvider(ctx, adapter, providerId);
   if (isResult(provider)) return provider;
