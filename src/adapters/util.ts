@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { accessSync, constants, statSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { signalGroup } from "../core/terminal.js";
 
 export interface CommandOutput {
   code: number;
@@ -34,10 +35,11 @@ export function runCommand(
     let stdout = "";
     let stderr = "";
     let timedOut = false;
-    const child = spawn(command, args, { env, stdio: ["ignore", "pipe", "pipe"] });
+    // Its own process group, so a timeout also stops children that hold the output open.
+    const child = spawn(command, args, { env, stdio: ["ignore", "pipe", "pipe"], detached: true });
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill("SIGKILL");
+      if (child.pid !== undefined) signalGroup(child.pid, "SIGKILL");
     }, timeoutMs);
     child.stdout.on("data", (chunk) => {
       stdout += chunk;

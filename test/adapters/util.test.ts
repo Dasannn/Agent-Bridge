@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -35,6 +35,24 @@ describe("runCommand", () => {
       300,
     );
     expect(result.code).toBe(124);
+  });
+
+  it("times out a command whose child keeps the output open, and stops the child", async () => {
+    const started = Date.now();
+    const result = await runCommand("sh", ["-c", "sleep 30 & echo $!; wait"], process.env, 300);
+    expect(result.code).toBe(124);
+    expect(Date.now() - started).toBeLessThan(5000);
+    const child = Number(result.stdout.trim());
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    // Gone, or a zombie waiting for its new parent to reap it.
+    const state = (() => {
+      try {
+        return readFileSync(`/proc/${child}/stat`, "utf8").split(") ")[1][0];
+      } catch {
+        return "gone";
+      }
+    })();
+    expect(["gone", "Z"]).toContain(state);
   });
 
   it("returns 127 when the command does not exist", async () => {
