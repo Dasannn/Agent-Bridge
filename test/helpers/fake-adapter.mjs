@@ -44,6 +44,10 @@ export const adapters = [
       provider("device", "device-code", "device-code", devicePrompt),
       provider("silent", "silent", "paste-code", pastePrompt),
       provider("stubborn", "stubborn", "paste-code", pastePrompt),
+      provider("stays-open", "paste-code", "paste-code", pastePrompt, [
+        "/usr/bin/env",
+        "FAKE_STAY_OPEN=1",
+      ]),
       {
         ...provider("menu", "menu", "device-code", devicePrompt),
         keys: [{ after: "Pick 1 or 2:", send: "2\r" }],

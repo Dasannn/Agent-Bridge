@@ -42,6 +42,12 @@ async function pasteCode() {
   process.stdout.write(code);
   if (code === "GOOD-CODE" || code === "-GOOD-CODE") {
     saveAuth();
+    if (process.env.FAKE_STAY_OPEN === "1") {
+      // Like Antigravity: continue into first-run screens instead of exiting.
+      process.stdout.write("\r\nChoose a theme:\r\n");
+      setInterval(() => {}, 1000);
+      return;
+    }
     process.stdout.write("\r\nSigned in\r\n");
     process.exit(0);
   }

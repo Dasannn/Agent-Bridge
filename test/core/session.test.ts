@@ -74,6 +74,19 @@ describe("session runner", () => {
     expect(await loginInProgress("fake", "paste", home)).toBe(false);
   });
 
+  it("succeeds when the CLI stays open after signing in", async () => {
+    const { home } = await start("stays-open");
+    const { cliPid } = state(home, "stays-open");
+    const began = Date.now();
+    expect(await complete(home, "stays-open", "GOOD-CODE")).toMatchObject({
+      status: "done",
+      ok: true,
+    });
+    expect(Date.now() - began).toBeLessThan(5000);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(isAlive(cliPid)).toBe(false);
+  });
+
   it("rejects an empty response and keeps the login alive", async () => {
     const { home } = await start("paste");
     expect(await complete(home, "paste", "  ")).toMatchObject({ status: "rejected" });
