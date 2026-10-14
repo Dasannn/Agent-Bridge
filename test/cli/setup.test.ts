@@ -94,6 +94,13 @@ describe("bridge setup", () => {
     expect(out.stdout).toContain("bridge skill --print");
   });
 
+  it("warns when the bridge command is not on PATH", async () => {
+    const { out, run } = setup({ ...claude, PATH: "/usr/bin:/bin" });
+    expect(await run("setup", "--agents", "alpha")).toBe(0);
+    expect(out.stdout).toMatch(/bridge: not on PATH/);
+    expect(out.stdout).toContain("npm install -g");
+  });
+
   it("requires known agents", async () => {
     const { out, run } = setup(claude);
     expect(await run("setup")).toBe(1);

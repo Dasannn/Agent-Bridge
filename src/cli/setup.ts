@@ -1,6 +1,7 @@
 // `bridge setup` (FR-2): prepares a session from an environment setup script.
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { findBinary } from "../adapters/util.js";
 import { detectHost } from "../core/host.js";
 import { type CommandResult, mask } from "../core/output.js";
 import { managedEnv, resolveHome } from "../core/paths.js";
@@ -86,6 +87,11 @@ export async function setup(
     } else {
       lines.push("permissions: skipped (--no-permissions)");
     }
+  }
+  if (!findBinary("bridge", deps.env)) {
+    lines.push(
+      "bridge: not on PATH, so the agent cannot run it. Install Agent-Bridge with `npm install -g` (not npx) in the setup script.",
+    );
   }
   return { ok, message: lines.join("\n") };
 }
