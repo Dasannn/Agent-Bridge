@@ -1,6 +1,6 @@
 # 0006: Claude Code CLI and the Host Agent
 
-- Status: Accepted (Codex Cloud host detection to be confirmed)
+- Status: Accepted
 - Date: 2026-10-14
 
 ## Context
@@ -34,7 +34,11 @@ than checked.
 
 **Host detection.** Claude Code sets `CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`,
 and, in cloud sessions, `CLAUDE_CODE_REMOTE` in the environment of the
-commands it runs. The equivalent for Codex is not yet verified.
+commands it runs. In a Codex Cloud task, the commands Codex runs see, among
+others, `CODEX_THREAD_ID`, `CODEX_SESSION_ID`, `CODEX_CI`,
+`CODEX_ENVIRONMENT_ID`, and `CODEX_HOME` (names only were collected, not
+values). `CODEX_HOME` alone is not a reliable signal, because users can set
+it themselves.
 
 **Delegation.** `claude -p "<task>"` runs non-interactively, with
 `--output-format json` and permission flags. Claude Code reads `CLAUDE.md`;
@@ -54,11 +58,12 @@ repository does.
   reports it as `host`; `login` refuses it with an explanation; and the skill
   never offers to delegate to it.
 - Host detection: Claude Code by `CLAUDECODE` or `CLAUDE_CODE_ENTRYPOINT`;
-  Codex by a variable to be confirmed in a Codex Cloud session.
+  Codex by `CODEX_THREAD_ID` or `CODEX_SESSION_ID`.
 
 ## Consequences
 
 - v1 adapters: OpenCode, Antigravity, Codex, and Claude Code.
 - Strategies: `paste-code` (Antigravity, Claude Code) and `device-code`
   (OpenCode's ChatGPT provider, Codex).
-- Task 0.5 adds a Codex Cloud check for host detection and skill loading.
+- Whether the Codex variables are also set by a local Codex CLI is checked
+  in Phase 3; detection must work in both.
