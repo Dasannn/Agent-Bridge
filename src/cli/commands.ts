@@ -134,6 +134,8 @@ export async function login(
   if (isResult(adapter)) return adapter;
   const refusal = hostRefusal(ctx, adapter);
   if (refusal) return refusal;
+  const provider = findProvider(ctx, adapter, providerId);
+  if (isResult(provider)) return provider;
   if (!(await adapter.isInstalled(ctx.cliEnv))) {
     try {
       await adapter.install(ctx.cliEnv);
@@ -142,8 +144,6 @@ export async function login(
       return fail(`Could not install ${adapter.displayName}.\n${detail}\n\n${NETWORK_HINT}`);
     }
   }
-  const provider = findProvider(ctx, adapter, providerId);
-  if (isResult(provider)) return provider;
   if (await provider.isAuthenticated(ctx.cliEnv)) {
     return { ok: true, message: `${adapter.displayName} is already authenticated.` };
   }

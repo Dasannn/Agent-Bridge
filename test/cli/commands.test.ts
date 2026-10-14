@@ -29,6 +29,7 @@ const missingAdapter: Adapter = {
   ...nodeAdapter,
   id: "missing",
   requiresLogin: true,
+  providers: [fake.providers[0]],
   isInstalled: async () => false,
   install: async () => {
     throw new Error("npm could not install missing-cli:\nE404 Not Found");
@@ -231,6 +232,14 @@ describe("login and complete", () => {
     expect(await run("login", "fake", "--provider", "device")).toBe(0);
     expect(lateInstalled).toBe(true);
     expect(out.stdout).toContain("ABCD-1234");
+  });
+
+  it("asks for the provider before installing", async () => {
+    lateInstalled = false;
+    const { out, run } = setup({}, [lateAdapter]);
+    expect(await run("login", "fake")).toBe(1);
+    expect(out.stderr).toContain("--provider");
+    expect(lateInstalled).toBe(false);
   });
 });
 
