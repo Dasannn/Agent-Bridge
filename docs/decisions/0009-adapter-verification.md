@@ -17,7 +17,7 @@ installed by Agent-Bridge into `<root>/prefix`.
 | CLI | Install | Login prompt | Login completed | Status | Logout | Delegation via `bridge run` |
 |---|---|---|---|---|---|---|
 | Antigravity | official script, ~6 s | yes | yes (owner) | yes | yes | yes, read `AGENTS.md` |
-| Codex | npm | yes (device code) | not tried: no subscription | not logged in | not tried | not tried |
+| Codex | npm | yes (device code and link) | yes (owner, by link; decision 0010) | yes | yes | yes, read `AGENTS.md` |
 | OpenCode | npm | yes (OpenAI device code) | not tried: no subscription | ready without login | verified with a test key (Phase 3.5) | yes, free model |
 | Claude Code | npm | yes (Phase 3.4) | not tried: host | host | host | host |
 
@@ -55,5 +55,6 @@ process is authenticated by the platform (decision 0006).
 
 - A container restart stops a pending login, and its code can no longer be
   used; the user must log in again. The README and skill should say so.
-- Real logins for Codex and OpenCode's ChatGPT and Copilot providers remain
-  for a volunteer with those subscriptions (spec remaining question 1).
+- Real logins for OpenCode's ChatGPT and Copilot providers and for Claude
+  Code remain; the owner holds those subscriptions, and Copilot and Claude
+  Code are tested from Codex Cloud (decision 0010).

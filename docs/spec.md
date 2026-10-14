@@ -278,9 +278,9 @@ The Phase 0 spike answered the original open questions; see
 
 Still open, to be verified in the phase that needs them:
 
-1. Real login and delegation for Codex, Claude Code, and OpenCode's ChatGPT
-   and GitHub Copilot providers (by a volunteer with the subscription; see
-   decision 0009).
+1. Real login and delegation for Claude Code and OpenCode's ChatGPT and
+   GitHub Copilot providers, with the owner's subscriptions; Claude Code and
+   Copilot from Codex Cloud (decisions 0009 and 0010).
 2. The Claude Code permission rule syntax written by `setup` (Phase 4).
 3. Whether a committed repository skill loads at the start of a Codex Cloud
    task (release checklist).
