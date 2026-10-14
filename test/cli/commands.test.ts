@@ -377,10 +377,9 @@ describe("errors", () => {
     expect(out.stderr).toContain("fake");
   });
 
-  it("marks setup and skill as not implemented", async () => {
+  it("marks setup as not implemented", async () => {
     const { out, run } = setup();
     expect(await run("setup")).toBe(1);
-    expect(await run("skill")).toBe(1);
     expect(out.stderr).toMatch(/not implemented yet/i);
   });
 });

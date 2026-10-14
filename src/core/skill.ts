@@ -11,6 +11,11 @@ export function readSkill(): string {
   return readFileSync(skillPath, "utf8");
 }
 
+/** True for a skill file that Agent-Bridge wrote (any version). */
+export function isAgentBridgeSkill(text: string): boolean {
+  return /^---\nname: agent-bridge\n/.test(text) && text.includes(START) && text.includes(END);
+}
+
 /** Per-CLI delegation, model, and effort options, generated from the adapters. */
 export function agentsSection(adapters: Adapter[]): string {
   return adapters

@@ -36,6 +36,7 @@ Usage:
   bridge complete [<agent>] [--provider <id>] ["<code>"] [--json]
   bridge logout <agent> [--provider <id>] [--json]
   bridge run <agent> -- <arguments for the CLI>
+  bridge skill --print | --repo
 
 Options:
   -h, --help     Show this help
@@ -103,8 +104,9 @@ export async function main(
       return emit(await commands.logout(deps, agent, values.provider));
     case "run":
       return commands.run(deps, agent, passthrough, emit);
-    case "setup":
     case "skill":
+      return emit(commands.skill(deps, { print: values.print, repo: values.repo }));
+    case "setup":
       return emit({ ok: false, message: `bridge ${command}: not implemented yet.` });
     default:
       io.stderr(
@@ -123,6 +125,8 @@ function parseOptions(args: string[]) {
       json: { type: "boolean" },
       provider: { type: "string" },
       device: { type: "boolean" },
+      print: { type: "boolean" },
+      repo: { type: "boolean" },
     },
   });
 }

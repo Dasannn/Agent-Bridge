@@ -1,9 +1,12 @@
 import { spawn } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import type { Adapter, LoginProvider, Registry } from "../core/adapter.js";
 import { detectHost } from "../core/host.js";
 import { type CommandResult, mask } from "../core/output.js";
 import { type BridgeHome, managedEnv, resolveHome } from "../core/paths.js";
 import { completeLogin, loginInProgress, startLogin } from "../core/session.js";
+import { isAgentBridgeSkill, readSkill } from "../core/skill.js";
 import { callbackTarget } from "../core/strategies.js";
 
 export interface Deps {
@@ -12,6 +15,8 @@ export interface Deps {
   /** Overrides for tests; default to the built-in runner and adapters. */
   runnerPath?: string;
   adapterModule?: string;
+  /** Working directory, for `skill --repo`; defaults to the process's. */
+  cwd?: string;
 }
 
 interface Context {
@@ -326,4 +331,37 @@ export async function run(
     });
     child.on("exit", (code, signal) => resolve(code ?? (signal ? 1 : 0)));
   });
+}
+
+const REPO_SKILL = join(".agents", "skills", "agent-bridge", "SKILL.md");
+
+function gitRoot(start: string): string | undefined {
+  for (let dir = start; ; dir = dirname(dir)) {
+    if (existsSync(join(dir, ".git"))) return dir;
+    if (dirname(dir) === dir) return undefined;
+  }
+}
+
+/** `bridge skill --print` or `--repo` (FR-6a). */
+export function skill(deps: Deps, mode: { print?: boolean; repo?: boolean }): CommandResult {
+  if (mode.print) return { ok: true, message: readSkill().trimEnd() };
+  if (!mode.repo) return fail("Choose `bridge skill --print` or `bridge skill --repo`.");
+  const cwd = deps.cwd ?? process.cwd();
+  const root = gitRoot(cwd);
+  if (!root) return fail(`${cwd} is not inside a Git repository.`);
+  const target = join(root, REPO_SKILL);
+  if (existsSync(target) && !isAgentBridgeSkill(readFileSync(target, "utf8"))) {
+    return fail(
+      `${relative(cwd, target)} exists and was not written by Agent-Bridge; left unchanged.`,
+    );
+  }
+  mkdirSync(dirname(target), { recursive: true });
+  const temporary = `${target}.tmp-${process.pid}`;
+  writeFileSync(temporary, readSkill());
+  renameSync(temporary, target);
+  return {
+    ok: true,
+    message: `Wrote ${REPO_SKILL} in ${root}. Ask the user to review and commit it; Codex loads it when a new task starts.`,
+    data: { path: target },
+  };
 }
