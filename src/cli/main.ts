@@ -33,7 +33,7 @@ Commands:
 Usage:
   bridge status [agent] [--json]
   bridge login <agent> [--provider <id>] [--json]
-  bridge complete <agent> [--provider <id>] ["<code>"] [--json]
+  bridge complete [<agent>] [--provider <id>] ["<code>"] [--json]
   bridge logout <agent> [--provider <id>] [--json]
   bridge run <agent> -- <arguments for the CLI>
 

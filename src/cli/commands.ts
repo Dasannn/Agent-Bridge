@@ -181,6 +181,30 @@ export async function login(
   };
 }
 
+/** Finds the only login in progress, for `bridge complete "<code>"` without an agent. */
+async function onlyLoginInProgress(
+  ctx: Context,
+): Promise<{ adapter: Adapter; provider: LoginProvider } | CommandResult> {
+  const found: Array<{ adapter: Adapter; provider: LoginProvider }> = [];
+  for (const adapter of ctx.deps.registry.list()) {
+    for (const provider of adapter.providers) {
+      if (await loginInProgress(adapter.id, provider.id, ctx.home)) {
+        found.push({ adapter, provider });
+      }
+    }
+  }
+  if (found.length === 1) return found[0];
+  if (found.length === 0) {
+    return fail("No login is in progress. Run `bridge login <agent>` first.");
+  }
+  const names = found
+    .map(({ adapter, provider }) => `${adapter.id}${providerFlag(adapter, provider)}`)
+    .join(", ");
+  return fail(
+    `Several logins are in progress (${names}). Name one: bridge complete <agent> [--provider <id>] "<code>".`,
+  );
+}
+
 export async function complete(
   deps: Deps,
   agent?: string,
@@ -188,10 +212,25 @@ export async function complete(
   response?: string,
 ): Promise<CommandResult> {
   const ctx = context(deps);
-  const adapter = findAdapter(ctx, agent);
-  if (isResult(adapter)) return adapter;
-  const provider = findProvider(ctx, adapter, providerId);
-  if (isResult(provider)) return provider;
+  // `bridge complete "<code>"`: a single argument that is not an agent is the response.
+  if (agent !== undefined && response === undefined && !deps.registry.get(agent)) {
+    response = agent;
+    agent = undefined;
+  }
+  let adapter: Adapter;
+  let provider: LoginProvider;
+  if (agent === undefined && providerId === undefined) {
+    const only = await onlyLoginInProgress(ctx);
+    if (isResult(only)) return only;
+    ({ adapter, provider } = only);
+  } else {
+    const foundAdapter = findAdapter(ctx, agent);
+    if (isResult(foundAdapter)) return foundAdapter;
+    const foundProvider = findProvider(ctx, foundAdapter, providerId);
+    if (isResult(foundProvider)) return foundProvider;
+    adapter = foundAdapter;
+    provider = foundProvider;
+  }
   const secrets = response ? [response, response.trim()] : [];
 
   const result = await completeLogin({

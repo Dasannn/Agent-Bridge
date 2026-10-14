@@ -147,6 +147,38 @@ describe("login and complete", () => {
     expect(out.stdout + out.stderr).not.toContain("WRONG-SECRET-9");
   });
 
+  it("completes the only login in progress when no agent is named", async () => {
+    const { out, run } = setup();
+    await run("login", "fake", "--provider", "paste");
+    expect(await run("complete", "GOOD-CODE")).toBe(0);
+    expect(out.stdout).toContain("Signed in to Fake CLI");
+  });
+
+  it("accepts a dash code after -- when no agent is named", async () => {
+    const { run } = setup();
+    await run("login", "fake", "--provider", "paste");
+    expect(await run("complete", "--", "-GOOD-CODE")).toBe(0);
+  });
+
+  it("asks for the agent when several logins are in progress", async () => {
+    const { out, run } = setup();
+    await run("login", "fake", "--provider", "paste");
+    await run("login", "fake", "--provider", "device");
+    expect(await run("complete", "GOOD-CODE")).toBe(1);
+    expect(out.stderr).toMatch(/several logins/i);
+    expect(out.stderr).toContain("fake --provider paste");
+    expect(out.stderr).toContain("fake --provider device");
+    expect(out.stderr).not.toContain("GOOD-CODE");
+  });
+
+  it("complete without agent or login explains the next step", async () => {
+    const { out, run } = setup();
+    expect(await run("complete", "SOME-CODE")).toBe(1);
+    expect(out.stderr).toMatch(/no login is in progress/i);
+    expect(out.stderr).toContain("bridge login <agent>");
+    expect(out.stderr).not.toContain("SOME-CODE");
+  });
+
   it("complete without login explains the next step", async () => {
     const { out, run } = setup();
     expect(await run("complete", "fake", "--provider", "paste", "X")).toBe(1);

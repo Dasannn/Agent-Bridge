@@ -142,8 +142,11 @@ logged out.
 
 ### FR-5 `complete`
 
-`bridge complete <agent> [response]`:
+`bridge complete [<agent>] [response]`:
 
+- The agent may be omitted when exactly one login is in progress, so the user
+  can finish a login with just `bridge complete "<code>"`. With several logins
+  in progress it lists them and asks for the agent.
 - Delivers the user's pasted response to the in-progress login as typed
   input (paste-code flows). For device-code flows, which need no response,
   it waits for the login to finish.
