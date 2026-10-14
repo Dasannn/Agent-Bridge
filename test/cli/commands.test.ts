@@ -253,6 +253,7 @@ describe("login by link", () => {
     const { out, run } = setup();
     expect(await run("login", "fake", "--provider", "link")).toBe(0);
     expect(out.stdout).toMatch(/address bar/i);
+    expect(out.stdout).toMatch(/starts with http:\/\/127\.0\.0\.1:\d+\/cb/);
     expect(out.stdout).toContain('bridge complete fake --provider link "<address>"');
     const address = callback(out.stdout, "code=GOOD-CODE&state=s1");
     expect(await run("complete", address)).toBe(0);

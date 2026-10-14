@@ -13,6 +13,7 @@ describe("opencode adapter", () => {
     const prompt = provider("openai")?.parsePrompt(fixture("opencode-openai-link.txt"));
     expect(prompt?.url.endsWith("&originator=opencode")).toBe(true);
     expect(callbackTarget(prompt)).toEqual({
+      origin: "http://localhost:1455",
       port: 1455,
       path: "/auth/callback",
       state: "STATE-PLACEHOLDER",

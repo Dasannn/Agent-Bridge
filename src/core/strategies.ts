@@ -9,12 +9,17 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1"]);
 /** Where a loopback login redirects the browser: its `redirect_uri` and `state`. */
 export function callbackTarget(
   prompt: LoginPrompt | undefined,
-): { port: number; path: string; state: string | null } | undefined {
+): { origin: string; port: number; path: string; state: string | null } | undefined {
   try {
     const params = new URL(prompt?.url ?? "").searchParams;
     const redirect = new URL(params.get("redirect_uri") ?? "");
     if (!LOOPBACK_HOSTS.has(redirect.hostname) || !redirect.port) return undefined;
-    return { port: Number(redirect.port), path: redirect.pathname, state: params.get("state") };
+    return {
+      origin: redirect.origin,
+      port: Number(redirect.port),
+      path: redirect.pathname,
+      state: params.get("state"),
+    };
   } catch {
     return undefined;
   }
@@ -25,8 +30,8 @@ function validateCallback(
   prompt: LoginPrompt | undefined,
 ): ValidationResult {
   const target = callbackTarget(prompt);
-  const port = target?.port ?? "the login's port";
-  const explain = `After signing in, copy the full address from your browser's address bar (it starts with http://localhost:${port}/) and paste it.`;
+  const start = target ? ` (it starts with ${target.origin}${target.path})` : "";
+  const explain = `After signing in, copy the full address from your browser's address bar${start} and paste it.`;
   let value = input?.trim() ?? "";
   if (/^(localhost|127\.0\.0\.1):/.test(value)) value = `http://${value}`;
   let url: URL;

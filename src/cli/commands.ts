@@ -180,8 +180,9 @@ export async function login(
       next = command;
       break;
     case "loopback-callback": {
-      const port = callbackTarget(result.prompt)?.port ?? "";
-      userMessage = `Open this URL in your browser and sign in:\n${url}\n\nYour browser will then show an error page for localhost. That is expected: copy the full address from the address bar (it starts with http://localhost:${port}/) and paste it back here.`;
+      const target = callbackTarget(result.prompt);
+      const start = target ? ` (it starts with ${target.origin}${target.path})` : "";
+      userMessage = `Open this URL in your browser and sign in:\n${url}\n\nYour browser will then show an error page, because that address points at the cloud machine. That is expected: copy the full address from the address bar${start} and paste it back here.`;
       next = `${command} "<address>"`;
       break;
     }

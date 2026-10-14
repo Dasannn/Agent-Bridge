@@ -17,6 +17,7 @@ describe("codex adapter", () => {
     expect(prompt?.url.startsWith("https://auth.openai.com/oauth/authorize?")).toBe(true);
     expect(prompt?.url.endsWith("&originator=codex_cli_rs")).toBe(true);
     expect(callbackTarget(prompt)).toEqual({
+      origin: "http://127.0.0.1:1455",
       port: 1455,
       path: "/auth/callback",
       state: "STATE-PLACEHOLDER",
