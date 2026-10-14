@@ -1,12 +1,12 @@
 // `bridge setup` (FR-2): prepares a session from an environment setup script.
-import { mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { findBinary } from "../adapters/util.js";
 import { detectHost } from "../core/host.js";
 import { type CommandResult, mask } from "../core/output.js";
 import { managedEnv, resolveHome } from "../core/paths.js";
 import { grantPermissions, permissionRules } from "../core/permissions.js";
-import { readCommand, readSkill } from "../core/skill.js";
+import { isAgentBridgeCommand, readCommand, readSkill } from "../core/skill.js";
 import type { Deps } from "./commands.js";
 
 function writeFile(path: string, content: string): void {
@@ -32,6 +32,9 @@ export async function setup(
     };
   }
 
+  if (!deps.env.HOME) {
+    return { ok: false, message: "HOME is not set, so there is nowhere to install the skill." };
+  }
   const host = detectHost(deps.env);
   const cliEnv = managedEnv(deps.env, resolveHome(deps.env));
   const lines: string[] = [];
@@ -66,14 +69,28 @@ export async function setup(
       "skill: Codex cannot load user skills; run `bridge skill --print` in a task, or `bridge skill --repo` to add it to the repository.",
     );
   } else {
-    const claudeDir = join(deps.env.HOME ?? "", ".claude");
+    const claudeDir = join(deps.env.HOME, ".claude");
     try {
       writeFile(join(claudeDir, "skills", "agent-bridge", "SKILL.md"), readSkill());
-      writeFile(join(claudeDir, "commands", "bridge-code.md"), readCommand());
-      lines.push(`skill: installed in ${claudeDir} (skill agent-bridge, command /bridge-code)`);
+      lines.push(`skill: installed in ${join(claudeDir, "skills", "agent-bridge")}`);
     } catch (error) {
       lines.push(`skill: failed (${(error as Error).message})`);
       ok = false;
+    }
+    const commandPath = join(claudeDir, "commands", "bridge-code.md");
+    if (existsSync(commandPath) && !isAgentBridgeCommand(readFileSync(commandPath, "utf8"))) {
+      lines.push(
+        `command: ${commandPath} exists and was not written by Agent-Bridge; left unchanged`,
+      );
+      ok = false;
+    } else {
+      try {
+        writeFile(commandPath, readCommand());
+        lines.push("command: installed /bridge-code");
+      } catch (error) {
+        lines.push(`command: failed (${(error as Error).message})`);
+        ok = false;
+      }
     }
     if (options.permissions) {
       const rules = permissionRules(binaries);
@@ -90,7 +107,7 @@ export async function setup(
   }
   if (!findBinary("bridge", deps.env)) {
     lines.push(
-      "bridge: not on PATH, so the agent cannot run it. Install Agent-Bridge with `npm install -g` (not npx) in the setup script.",
+      "bridge: not on PATH, so the agent cannot run it. Install Agent-Bridge in the setup script so that `bridge` is on PATH, not with npx (see the README).",
     );
   }
   return { ok, message: lines.join("\n") };

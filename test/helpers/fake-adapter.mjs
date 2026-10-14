@@ -81,6 +81,10 @@ export const adapters = [
           parsePrompt: devicePrompt,
         },
       },
+      provider("link-stays", "loopback", "loopback-callback", linkPrompt, [
+        "/usr/bin/env",
+        "FAKE_LISTENER_STAYS=1",
+      ]),
       provider("denied", "device-code", "device-code", devicePrompt, [
         "/usr/bin/env",
         "FAKE_FAIL=1",

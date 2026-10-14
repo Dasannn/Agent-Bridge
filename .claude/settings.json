@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(agent-bridge *)",
+      "Bash(bridge *)",
+      "Bash(alpha *)"
+    ]
+  }
+}

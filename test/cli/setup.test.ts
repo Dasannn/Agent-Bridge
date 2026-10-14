@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -98,7 +98,22 @@ describe("bridge setup", () => {
     const { out, run } = setup({ ...claude, PATH: "/usr/bin:/bin" });
     expect(await run("setup", "--agents", "alpha")).toBe(0);
     expect(out.stdout).toMatch(/bridge: not on PATH/);
-    expect(out.stdout).toContain("npm install -g");
+    expect(out.stdout).toContain("not with npx");
+  });
+
+  it("refuses to run without a home directory", async () => {
+    const { out, run } = setup({ ...claude, HOME: undefined });
+    expect(await run("setup", "--agents", "alpha")).toBe(1);
+    expect(out.stderr).toMatch(/HOME/);
+  });
+
+  it("keeps a /bridge-code command the user wrote", async () => {
+    const { out, run, path } = setup(claude);
+    mkdirSync(path("commands"), { recursive: true });
+    writeFileSync(path("commands", "bridge-code.md"), "mine\n");
+    expect(await run("setup", "--agents", "alpha")).toBe(1);
+    expect(readFileSync(path("commands", "bridge-code.md"), "utf8")).toBe("mine\n");
+    expect(out.stdout + out.stderr).toMatch(/not written by Agent-Bridge/);
   });
 
   it("requires known agents", async () => {

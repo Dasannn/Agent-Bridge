@@ -1,4 +1,13 @@
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -59,6 +68,18 @@ describe("permissions", () => {
       expect(result.ok).toBe(false);
       expect(readFileSync(path, "utf8")).toBe(content);
     }
+  });
+
+  it("keeps a symlinked settings file as a link", () => {
+    const path = fresh();
+    grantPermissions(path, []);
+    const real = join(path, "..", "real-settings.json");
+    writeFileSync(real, "{}");
+    rmSync(path);
+    symlinkSync(real, path);
+    expect(grantPermissions(path, ["Bash(bridge *)"]).ok).toBe(true);
+    expect(lstatSync(path).isSymbolicLink()).toBe(true);
+    expect(read(real)).toEqual({ permissions: { allow: ["Bash(bridge *)"] } });
   });
 
   it("leaves no temporary file behind", () => {

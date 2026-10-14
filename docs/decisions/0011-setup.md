@@ -53,6 +53,16 @@ short sentence.
 After release, `npm install -g cloud-agent-bridge` installs the published
 build and runs no `prepare` step.
 
+**Quoting in `/bridge-code`.** `$ARGUMENTS` is placed in single quotes but
+not escaped, so a pasted text containing `'` could end the quoting. This is
+accepted for three reasons:
+
+- The user types the command themselves.
+- Codes and callback addresses contain no `'`: browsers percent-encode it in
+  query strings.
+- Claude Code requires every part of a compound command to be allowed, and
+  the command only allows `bridge complete *`.
+
 ## Decision
 
 - `bridge setup` detects the host from the environment.

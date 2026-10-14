@@ -247,7 +247,9 @@ Without a defined workflow, delegation proceeds normally.
 
 ## Security Requirements
 
-- Pasted responses are sent only to the CLI's standard input.
+- Pasted responses are sent only to the CLI being authenticated: to its
+  standard input, or to its callback listener on the container's loopback
+  interface after the checks in FR-5 (constitution principle 2).
 - Codes and tokens are never written to logs or to Agent-Bridge state, and are
   masked in any error output.
 - Agent-Bridge stores its own state outside the user's repository and never

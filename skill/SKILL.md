@@ -33,9 +33,10 @@ relay.
    - For ChatGPT logins, add `--device` if the user prefers to type a code
      over pasting an address.
 3. Relay the message it prints to the user, exactly as printed.
-4. When the user replies, run `bridge complete "<what they pasted>"`: a code,
-   or the address their browser could not open. With no reply needed
-   (device codes), run `bridge complete <agent>` once they say they are done.
+4. When the user replies, run the `bridge complete` command that `login`
+   printed, with what they pasted: a code, or the address their browser
+   could not open. With no reply needed (device codes), run it once they say
+   they are done.
 5. If `complete` rejects the input, the login keeps waiting: relay the error
    and let the user paste again. If it says no login is in progress (for
    example after the container restarted), start again with `bridge login`.

@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import type { Adapter, LoginProvider, Registry } from "../core/adapter.js";
+import { type Adapter, type LoginProvider, loginMethod, type Registry } from "../core/adapter.js";
 import { detectHost } from "../core/host.js";
 import { type CommandResult, mask } from "../core/output.js";
 import { type BridgeHome, managedEnv, resolveHome } from "../core/paths.js";
@@ -143,7 +143,7 @@ export async function login(
   if (refusal) return refusal;
   const provider = findProvider(ctx, adapter, providerId);
   if (isResult(provider)) return provider;
-  const method = device ? provider.device : provider;
+  const method = loginMethod(provider, device);
   if (!method) return fail(`${adapter.displayName} has no device-code login.`);
   if (!(await adapter.isInstalled(ctx.cliEnv))) {
     try {

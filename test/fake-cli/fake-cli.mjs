@@ -76,6 +76,7 @@ async function loopback() {
       url.searchParams.get("state") === "s1" &&
       url.searchParams.get("code") === "GOOD-CODE";
     res.writeHead(ok ? 200 : 400).end(ok ? "Signed in" : "Login failed");
+    if (!ok && process.env.FAKE_LISTENER_STAYS === "1") return;
     if (ok) saveAuth();
     process.stdout.write(ok ? "Signed in\r\n" : "Login failed\r\n");
     setTimeout(() => process.exit(ok ? 0 : 1), 100);

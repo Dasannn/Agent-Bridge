@@ -96,11 +96,14 @@ build time, and implement `bridge setup` to install the CLIs and the skill
 and to grant the agent permission to run them, plus the Claude Code
 `/bridge-code` command (FR-6b).
 
-Exit criteria: in a fresh cloud session whose setup script runs
-`npx -y github:dasannn/agent-bridge setup --agents opencode,agy,codex,claude`
-(Claude Code cloud), and in a Codex Cloud task using `bridge skill --print`,, the skill is
-loaded, no permission prompts appear, and the primary agent can authenticate and delegate to both CLIs on
-request, following a project's SDD workflow when one exists.
+Exit criteria: in a fresh Claude Code on the web session whose setup script
+installs Agent-Bridge and runs `bridge setup --agents opencode,agy,codex`
+(decision 0011), and in a Codex Cloud task using `bridge skill --print`:
+
+- the skill is loaded;
+- no permission prompts appear;
+- the primary agent can authenticate and delegate to the CLIs on request;
+- it follows a project's SDD workflow when one exists.
 
 ### Phase 5 — Release
 

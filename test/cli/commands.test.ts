@@ -276,6 +276,37 @@ describe("login by link", () => {
     expect(out.stdout + out.stderr).not.toContain("BAD-SECRET-7");
   });
 
+  it("reports at once when the CLI's listener rejects the sign-in", async () => {
+    const { out, run } = setup();
+    await run("login", "fake", "--provider", "link-stays");
+    const started = Date.now();
+    expect(await run("complete", callback(out.stdout, "code=BAD-SECRET-8&state=s1"))).toBe(1);
+    expect(Date.now() - started).toBeLessThan(10_000);
+    expect(out.stderr).toMatch(/HTTP 400/);
+    expect(out.stdout + out.stderr).not.toContain("BAD-SECRET-8");
+  });
+
+  it("says the CLI stopped waiting when its listener is gone", async () => {
+    const { out, run } = setup();
+    await run("login", "fake", "--provider", "link");
+    const address = callback(out.stdout, "code=GOOD-CODE&state=s1");
+    const port = new URL(address).port;
+    // Stop the CLI but keep the runner: kill only the process listening on the port.
+    const { execSync } = await import("node:child_process");
+    execSync(
+      `kill $(lsof -t -iTCP:${port} -sTCP:LISTEN 2>/dev/null || fuser ${port}/tcp 2>/dev/null)`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(await run("complete", address)).toBe(1);
+    expect(out.stderr).toMatch(/no longer waiting|exited|failed/i);
+  });
+
+  it("accepts --device for a login that already uses a device code", async () => {
+    const { out, run } = setup();
+    expect(await run("login", "fake", "--provider", "device", "--device")).toBe(0);
+    expect(out.stdout).toContain("ABCD-1234");
+  });
+
   it("uses the device-code alternative with --device", async () => {
     const { out, run } = setup();
     expect(await run("login", "fake", "--provider", "link", "--device")).toBe(0);

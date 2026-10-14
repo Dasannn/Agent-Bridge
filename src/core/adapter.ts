@@ -38,6 +38,16 @@ export interface LoginProvider extends LoginMethod {
   logout(env: NodeJS.ProcessEnv): Promise<void>;
 }
 
+/**
+ * The login method to run: the default one, or with `--device` the provider's
+ * device-code alternative (a provider whose default already uses a device
+ * code is its own alternative). Undefined when there is none.
+ */
+export function loginMethod(provider: LoginProvider, device = false): LoginMethod | undefined {
+  if (!device) return provider;
+  return provider.device ?? (provider.strategy === "device-code" ? provider : undefined);
+}
+
 export interface Adapter {
   id: string;
   displayName: string;

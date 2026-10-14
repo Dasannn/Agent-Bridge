@@ -4,7 +4,13 @@ import { rmSync, writeFileSync } from "node:fs";
 import { get } from "node:http";
 import { createServer, type Socket } from "node:net";
 import { pathToFileURL } from "node:url";
-import type { Adapter, LoginMethod, LoginPrompt, LoginProvider } from "./adapter.js";
+import {
+  type Adapter,
+  type LoginMethod,
+  type LoginPrompt,
+  type LoginProvider,
+  loginMethod,
+} from "./adapter.js";
 import { mask } from "./output.js";
 import { sessionPaths } from "./paths.js";
 import type { CompleteResult, RunnerConfig, SessionState, StartResult } from "./session.js";
@@ -45,16 +51,26 @@ async function loadProvider(): Promise<{ adapter: Adapter; provider: LoginProvid
 }
 
 /** Delivers the pasted callback to the CLI's listener on the loopback interface. */
-function deliverCallback(port: number, path: string): Promise<string | undefined> {
+type Delivery = { ok: true } | { ok: false; error: string; status?: number };
+
+function deliverCallback(port: number, path: string): Promise<Delivery> {
   return new Promise((resolve) => {
     const request = get({ host: "127.0.0.1", port, path, timeout: 15_000 }, (response) => {
       response.resume();
-      response.on("end", () => resolve(undefined));
+      response.on("end", () => {
+        const status = response.statusCode ?? 0;
+        resolve(status >= 400 ? { ok: false, error: `HTTP ${status}`, status } : { ok: true });
+      });
     });
     request.on("timeout", () => request.destroy(new Error("no answer")));
-    request.on("error", (error) => resolve((error as NodeJS.ErrnoException).code ?? error.message));
+    request.on("error", (error) =>
+      resolve({ ok: false, error: (error as NodeJS.ErrnoException).code ?? error.message }),
+    );
   });
 }
+
+// After a rejected callback, how long to let the CLI print its own error.
+const REJECTION_GRACE_MS = 2000;
 
 async function waitForPrompt(
   terminal: Terminal,
@@ -84,7 +100,7 @@ async function waitForPrompt(
 
 async function main(): Promise<void> {
   const { provider } = await loadProvider();
-  const chosen = config.device ? provider.device : provider;
+  const chosen = loginMethod(provider, config.device);
   if (!chosen) {
     report({ ok: false, error: "This login has no device-code alternative." });
     cleanup();
@@ -220,15 +236,25 @@ async function main(): Promise<void> {
       if (method.strategy === "loopback-callback" && target && validation.value !== undefined) {
         const timeoutMs = request.timeoutMs;
         const path = validation.value;
-        result = deliverCallback(target.port, path).then((error) =>
-          error
-            ? {
-                status: "done" as const,
-                ok: false,
-                message: `The CLI is no longer waiting for the browser (${error}).`,
-              }
-            : finishLogin(timeoutMs, secrets),
-        );
+        result = deliverCallback(target.port, path).then(async (delivery) => {
+          if (delivery.ok) return finishLogin(timeoutMs, secrets);
+          if (delivery.status === undefined) {
+            return {
+              status: "done" as const,
+              ok: false,
+              message: `The CLI is no longer waiting for the browser (${delivery.error}).`,
+            };
+          }
+          await Promise.race([
+            terminal.exited,
+            new Promise((resolve) => setTimeout(resolve, REJECTION_GRACE_MS)),
+          ]);
+          return {
+            status: "done" as const,
+            ok: false,
+            message: `The CLI rejected the sign-in (${delivery.error}).\n${tail(terminal.screen(), secrets)}`,
+          };
+        });
       } else {
         if (validation.value !== undefined) terminal.write(`${validation.value}\r`);
         result = finishLogin(request.timeoutMs, secrets);

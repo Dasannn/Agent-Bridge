@@ -1,5 +1,12 @@
 // Allow rules merged into the primary agent's user settings (ARCHITECTURE.md, Permissions).
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname } from "node:path";
 
 export type GrantResult = { ok: true; added: string[] } | { ok: false; error: string };
@@ -40,8 +47,10 @@ export function grantPermissions(path: string, rules: string[]): GrantResult {
   if (added.length === 0 && existsSync(path)) return { ok: true, added };
   settings.permissions = { ...permissions, allow: [...allow, ...added] };
   mkdirSync(dirname(path), { recursive: true });
-  const temporary = `${path}.tmp-${process.pid}`;
+  // Write through a symlinked settings file (dotfiles setups) instead of replacing the link.
+  const target = existsSync(path) ? realpathSync(path) : path;
+  const temporary = `${target}.tmp-${process.pid}`;
   writeFileSync(temporary, `${JSON.stringify(settings, null, 2)}\n`, { mode: 0o600 });
-  renameSync(temporary, path);
+  renameSync(temporary, target);
   return { ok: true, added };
 }

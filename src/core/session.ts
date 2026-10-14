@@ -195,7 +195,8 @@ export async function completeLogin(args: {
           ok: false,
           message: "Timed out waiting for the login to finish. Run `bridge complete` again.",
         }),
-      timeoutMs + 5000,
+      // Margin for the runner: a callback delivery may take up to 15 seconds first.
+      timeoutMs + 20_000,
     );
     socket.on("connect", () => {
       socket.write(`${JSON.stringify({ type: "complete", response: args.response, timeoutMs })}\n`);

@@ -21,6 +21,11 @@ export function isAgentBridgeSkill(text: string): boolean {
   return /^---\nname: agent-bridge\n/.test(text) && text.includes(START) && text.includes(END);
 }
 
+/** True for a `/bridge-code` command file that Agent-Bridge wrote (any version). */
+export function isAgentBridgeCommand(text: string): boolean {
+  return /^---\n[\s\S]*allowed-tools: Bash\(bridge complete \*\)/.test(text);
+}
+
 /** Per-CLI delegation, model, and effort options, generated from the adapters. */
 export function agentsSection(adapters: Adapter[]): string {
   return adapters

@@ -68,6 +68,20 @@ describe("validateResponse for loopback-callback", () => {
     expect(check("http://localhost:1455/other?code=abc&state=S1").ok).toBe(false);
   });
 
+  it("rejects crafted addresses that point elsewhere", () => {
+    for (const input of [
+      "http://localhost:1455@evil.test/auth/callback?code=abc&state=S1",
+      "http://127.0.0.1.evil.test:1455/auth/callback?code=abc&state=S1",
+      "http://[::1]:1455/auth/callback?code=abc&state=S1",
+      "http://localhost:1455/auth/x/../../other?code=abc&state=S1",
+      "https://localhost:1455/auth/callback?code=abc&state=S1",
+    ]) {
+      expect(check(input).ok).toBe(false);
+    }
+    const encoded = check("http://localhost:1455/auth/%2e%2e/callback?code=abc&state=S1");
+    expect(encoded.ok).toBe(false);
+  });
+
   it("rejects an address from another login", () => {
     const result = check("http://localhost:1455/auth/callback?code=abc&state=OTHER");
     expect(result.ok === false && result.error).toMatch(/different login/i);
