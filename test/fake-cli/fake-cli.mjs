@@ -38,6 +38,8 @@ async function pasteCode() {
   process.stdout.write("Open https://example.test/auth?state=s1\r\nPaste code: ");
   const line = await readUntil((b) => /[\r\n]/.test(b));
   const code = line.split(/[\r\n]/)[0].trim();
+  // Echo the typed code, as interactive CLIs do.
+  process.stdout.write(code);
   if (code === "GOOD-CODE") {
     saveAuth();
     process.stdout.write("\r\nSigned in\r\n");
