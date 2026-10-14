@@ -4,6 +4,7 @@ import { adapters } from "../adapters/index.js";
 import { createRegistry } from "../core/adapter.js";
 import { type CommandResult, render } from "../core/output.js";
 import * as commands from "./commands.js";
+import { setup } from "./setup.js";
 
 export interface Io {
   stdout(text: string): void;
@@ -31,6 +32,7 @@ Commands:
   skill      Print the skill, or add it to the current repository
 
 Usage:
+  bridge setup --agents <list> [--no-permissions]
   bridge status [agent] [--json]
   bridge login <agent> [--provider <id>] [--device] [--json]
   bridge complete [<agent>] [--provider <id>] ["<code>"] [--json]
@@ -107,7 +109,9 @@ export async function main(
     case "skill":
       return emit(commands.skill(deps, { print: values.print, repo: values.repo }));
     case "setup":
-      return emit({ ok: false, message: `bridge ${command}: not implemented yet.` });
+      return emit(
+        await setup(deps, { agents: values.agents, permissions: !values["no-permissions"] }),
+      );
     default:
       io.stderr(
         `Unknown command: ${command}\nRun \`bridge --help\` to see the available commands.\n`,
@@ -126,6 +130,8 @@ function parseOptions(args: string[]) {
       provider: { type: "string" },
       device: { type: "boolean" },
       print: { type: "boolean" },
+      agents: { type: "string" },
+      "no-permissions": { type: "boolean" },
       repo: { type: "boolean" },
     },
   });

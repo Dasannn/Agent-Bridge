@@ -11,6 +11,11 @@ export function readSkill(): string {
   return readFileSync(skillPath, "utf8");
 }
 
+/** The Claude Code `/bridge-code` command (FR-6b). */
+export function readCommand(): string {
+  return readFileSync(new URL("../../skill/bridge-code.md", import.meta.url), "utf8");
+}
+
 /** True for a skill file that Agent-Bridge wrote (any version). */
 export function isAgentBridgeSkill(text: string): boolean {
   return /^---\nname: agent-bridge\n/.test(text) && text.includes(START) && text.includes(END);

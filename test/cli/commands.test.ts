@@ -376,10 +376,4 @@ describe("errors", () => {
     expect(out.stderr).toContain("Unknown agent: nope");
     expect(out.stderr).toContain("fake");
   });
-
-  it("marks setup as not implemented", async () => {
-    const { out, run } = setup();
-    expect(await run("setup")).toBe(1);
-    expect(out.stderr).toMatch(/not implemented yet/i);
-  });
 });
