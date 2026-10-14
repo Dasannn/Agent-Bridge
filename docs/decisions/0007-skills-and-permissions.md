@@ -1,6 +1,6 @@
 # 0007: Skills and Permissions in Cloud Agents
 
-- Status: Accepted for Claude Code cloud; Codex Cloud under investigation
+- Status: Accepted
 - Date: 2026-10-14
 
 ## Context
@@ -37,8 +37,25 @@ layout than the documented *Setup script* and *Maintenance script*).
 - **Secrets.** Third-party documentation states that Codex Cloud removes
   secrets from the environment when the agent phase starts.
 
+Further probes inside a Codex Cloud task (follow-up messages in one task):
+
+- The task sandbox uses permission profile `:workspace`. Writable: `/tmp`
+  and `/workspace`. Read-only: `$HOME` (`/home/agent`), `~/.codex`,
+  `~/.local`, and `$CODEX_HOME`. `/workspace/.agents`, `/workspace/.codex`,
+  and `/workspace/.git` are empty read-only mounts.
+- The repository is checked out at `/workspace/<repo>`, not `/workspace`.
+- `npm i -g` fails because the npm prefix is `~/.local`.
+- Writing `~/.codex/skills/...` fails (read-only file system).
+- Writing `/workspace/<repo>/.agents/skills/agent-bridge-probe/SKILL.md`
+  succeeds, but the skill is not loaded later in the same task: Codex reads
+  skills when a task starts.
+- The environment settings offer persistent environment variables.
+
 Codex officially reads repository skills from `.agents/skills/` in each
-directory from the working directory up to the repository root.
+directory from the working directory up to the repository root, at task
+start. Loading a committed repository skill in a new task was not tested,
+because Codex Cloud tasks run on the default branch and this project does not
+write to `main` during Phase 0.
 
 ### Claude Code cloud
 
@@ -50,17 +67,22 @@ runs before the agent starts and its home directory is the agent's.
 
 ## Decision
 
-Provisional, for the Phase 0 review:
-
-- Codex Cloud cannot yet be configured to load a user-level skill from the
-  environment settings. The reliable path is a repository skill at
-  `.agents/skills/agent-bridge/SKILL.md`, which the user adds to their own
-  repository.
-- Agent installation of CLIs in Codex Cloud happens in the agent phase
-  (`npx -y @dasannn/agent-bridge setup ...` run by the agent), because the
-  install script's output is not visible to the agent.
-- Codex Cloud requires *Allow Codex to access internet* with at least the
-  provider hosts allowed.
+- **Claude Code cloud:** `bridge setup` in the environment setup script
+  installs the skill to `~/.claude/skills/agent-bridge/` and grants
+  permissions in `~/.claude/settings.json`. Verified.
+- **Codex Cloud:** user-level skills are not possible. Two paths, both
+  supported:
+  1. Persistent: `bridge skill --repo` writes
+     `.agents/skills/agent-bridge/SKILL.md`; the user commits it to the
+     default branch, and later tasks load it at start (official behavior, to
+     be verified at release).
+  2. Fallback, always available: the agent runs `bridge skill --print` and
+     follows the printed instructions in the current task.
+- **Codex Cloud runtime:** Agent-Bridge cannot install globally or write to
+  `$HOME`, so it uses a portable home (see decision 0008).
+- Codex Cloud requires *Allow Codex to access internet* with the provider
+  hosts allowed. Codex has no per-command permission list, so `setup` skips
+  the permissions step there.
 
 ## Consequences
 
