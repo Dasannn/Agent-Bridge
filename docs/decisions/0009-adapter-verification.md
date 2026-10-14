@@ -18,7 +18,7 @@ installed by Agent-Bridge into `<root>/prefix`.
 |---|---|---|---|---|---|---|
 | Antigravity | official script, ~6 s | yes | yes (owner) | yes | yes | yes, read `AGENTS.md` |
 | Codex | npm | yes (device code and link) | yes (owner, by link; decision 0010) | yes | yes | yes, read `AGENTS.md` |
-| OpenCode | npm | yes (OpenAI device code) | not tried: no subscription | ready without login | verified with a test key (Phase 3.5) | yes, free model |
+| OpenCode | npm | yes (OpenAI device code and link) | not tried yet | ready without login | verified with a test key (Phase 3.5) | yes, free model |
 | Claude Code | npm | yes (Phase 3.4) | not tried: host | host | host | host |
 
 Each CLI that ran kept its configuration and credentials inside the portable
