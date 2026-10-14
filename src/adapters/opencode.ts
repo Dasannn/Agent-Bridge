@@ -1,9 +1,18 @@
 // OpenCode (decision 0002). Usable without login through its free models;
-// subscription providers log in with device codes.
+// subscription providers log in by link or with device codes.
 import type { Adapter, LoginPrompt, LoginProvider } from "../core/adapter.js";
 import { findBinary, npmInstall, runCommand, stripAnsi } from "./util.js";
 
-function parsePrompt(screen: string): LoginPrompt | undefined {
+// The ChatGPT sign-in link, complete once the line below it is drawn.
+const LINK_PATTERN =
+  /Go to:\s*(https:\/\/auth\.openai\.com\/oauth\/authorize\?\S+)\s*\n[\s\S]*Complete authorization/;
+
+function parseLinkPrompt(screen: string): LoginPrompt | undefined {
+  const match = screen.match(LINK_PATTERN);
+  return match ? { url: match[1] } : undefined;
+}
+
+function parseDevicePrompt(screen: string): LoginPrompt | undefined {
   const url = screen.match(/Go to:\s*(https:\/\/\S+)/);
   const code = screen.match(/Enter code:\s*([A-Z0-9]{4}-[A-Z0-9]{4,6})[ \t]*\n/);
   return url && code ? { url: url[1], code: code[1] } : undefined;
@@ -30,13 +39,17 @@ async function opencodeCommand(args: string[], env: NodeJS.ProcessEnv) {
   return runCommand(binary, args, env, 60_000);
 }
 
-function provider(id: string, displayName: string, keys: LoginProvider["keys"]): LoginProvider {
+const LOGIN = ["opencode", "providers", "login"];
+
+function provider(
+  id: string,
+  displayName: string,
+  method: Pick<LoginProvider, "keys" | "strategy" | "parsePrompt" | "device">,
+): LoginProvider {
   return {
     id,
-    command: ["opencode", "providers", "login"],
-    keys,
-    strategy: "device-code",
-    parsePrompt,
+    command: LOGIN,
+    ...method,
     isAuthenticated: async (env) => {
       const result = await opencodeCommand(["providers", "list"], env);
       return connectedProviders(result.stdout).includes(displayName);
@@ -56,16 +69,34 @@ export const opencode: Adapter = {
   install: (env) => npmInstall("opencode-ai", env),
   delegationExample: 'bridge run opencode -- run "<task>" --format json',
   providers: [
-    provider("openai", "OpenAI", [
-      { after: "Search:", send: "OpenAI" },
-      { after: "(1 match)", send: "\r" },
-      { after: "Login method", send: "\u001b[B" },
-      { after: "● ChatGPT Pro/Plus (headless)", send: "\r" },
-    ]),
-    provider("github-copilot", "GitHub Copilot", [
-      { after: "Search:", send: "Copilot" },
-      { after: "(1 match)", send: "\r" },
-      { after: "deployment type", send: "\r" },
-    ]),
+    provider("openai", "OpenAI", {
+      keys: [
+        { after: "Search:", send: "OpenAI" },
+        { after: "(1 match)", send: "\r" },
+        { after: "● ChatGPT Pro/Plus (browser)", send: "\r" },
+      ],
+      strategy: "loopback-callback",
+      parsePrompt: parseLinkPrompt,
+      device: {
+        command: LOGIN,
+        keys: [
+          { after: "Search:", send: "OpenAI" },
+          { after: "(1 match)", send: "\r" },
+          { after: "Login method", send: "\u001b[B" },
+          { after: "● ChatGPT Pro/Plus (headless)", send: "\r" },
+        ],
+        strategy: "device-code",
+        parsePrompt: parseDevicePrompt,
+      },
+    }),
+    provider("github-copilot", "GitHub Copilot", {
+      keys: [
+        { after: "Search:", send: "Copilot" },
+        { after: "(1 match)", send: "\r" },
+        { after: "deployment type", send: "\r" },
+      ],
+      strategy: "device-code",
+      parsePrompt: parseDevicePrompt,
+    }),
   ],
 };

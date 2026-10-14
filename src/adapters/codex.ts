@@ -2,7 +2,16 @@
 import type { Adapter, LoginPrompt } from "../core/adapter.js";
 import { findBinary, npmInstall, runCommand } from "./util.js";
 
-function parsePrompt(screen: string): LoginPrompt | undefined {
+// The sign-in link, complete once the hint below it is drawn.
+const LINK_PATTERN =
+  /(https:\/\/auth\.openai\.com\/oauth\/authorize\?\S+)\s*\n[\s\S]*headless machine/;
+
+function parseLinkPrompt(screen: string): LoginPrompt | undefined {
+  const match = screen.match(LINK_PATTERN);
+  return match ? { url: match[1] } : undefined;
+}
+
+function parseDevicePrompt(screen: string): LoginPrompt | undefined {
   const url = screen.match(/https:\/\/auth\.openai\.com\/codex\/device\b/);
   const code = screen.match(/one-time code[^\n]*\n\s*([A-Z0-9]{4}-[A-Z0-9]{4,6})[ \t]*\n/);
   return url && code ? { url: url[0], code: code[1] } : undefined;
@@ -25,9 +34,14 @@ export const codex: Adapter = {
   providers: [
     {
       id: "default",
-      command: ["codex", "login", "--device-auth"],
-      strategy: "device-code",
-      parsePrompt,
+      command: ["codex", "login"],
+      strategy: "loopback-callback",
+      parsePrompt: parseLinkPrompt,
+      device: {
+        command: ["codex", "login", "--device-auth"],
+        strategy: "device-code",
+        parsePrompt: parseDevicePrompt,
+      },
       isAuthenticated: async (env) => (await codexCommand(["login", "status"], env)) === 0,
       logout: async (env) => {
         await codexCommand(["logout"], env);
