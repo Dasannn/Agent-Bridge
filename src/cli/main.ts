@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { adapters } from "../adapters/index.js";
 import { createRegistry } from "../core/adapter.js";
-import { type CommandResult, render } from "../core/output.js";
+import { type CommandResult, mask, render } from "../core/output.js";
 import * as commands from "./commands.js";
 import { setup } from "./setup.js";
 
@@ -81,7 +81,8 @@ export async function main(
   try {
     parsed = parseOptions(own);
   } catch (error) {
-    io.stderr(`${error instanceof Error ? error.message : String(error)}\n`);
+    const message = error instanceof Error ? error.message : String(error);
+    io.stderr(render({ ok: false, message }, own.includes("--json")));
     return 1;
   }
   const { values, positionals } = parsed;
@@ -92,31 +93,41 @@ export async function main(
   };
   const [agent, response] = positionals;
 
-  switch (command) {
-    case "status":
-      return emit(await commands.status(deps, agent));
-    case "login":
-      return emit(await commands.login(deps, agent, values.provider, values.device === true));
-    case "complete":
-      // A code may start with "-"; it can be passed after "--".
-      return emit(
-        await commands.complete(deps, agent, values.provider, passthrough[0] ?? response),
-      );
-    case "logout":
-      return emit(await commands.logout(deps, agent, values.provider));
-    case "run":
-      return commands.run(deps, agent, passthrough, emit);
-    case "skill":
-      return emit(commands.skill(deps, { print: values.print, repo: values.repo }));
-    case "setup":
-      return emit(
-        await setup(deps, { agents: values.agents, permissions: !values["no-permissions"] }),
-      );
-    default:
-      io.stderr(
-        `Unknown command: ${command}\nRun \`bridge --help\` to see the available commands.\n`,
-      );
-      return 1;
+  try {
+    return await dispatch();
+  } catch (error) {
+    // Unexpected failures are reported like any other result, with secrets masked.
+    const detail = error instanceof Error ? error.message : String(error);
+    return emit({ ok: false, message: `bridge ${command} failed: ${mask(detail)}` });
+  }
+
+  async function dispatch(): Promise<number> {
+    switch (command) {
+      case "status":
+        return emit(await commands.status(deps, agent));
+      case "login":
+        return emit(await commands.login(deps, agent, values.provider, values.device === true));
+      case "complete":
+        // A code may start with "-"; it can be passed after "--".
+        return emit(
+          await commands.complete(deps, agent, values.provider, passthrough[0] ?? response),
+        );
+      case "logout":
+        return emit(await commands.logout(deps, agent, values.provider));
+      case "run":
+        return commands.run(deps, agent, passthrough, emit);
+      case "skill":
+        return emit(commands.skill(deps, { print: values.print, repo: values.repo }));
+      case "setup":
+        return emit(
+          await setup(deps, { agents: values.agents, permissions: !values["no-permissions"] }),
+        );
+      default:
+        io.stderr(
+          `Unknown command: ${command}\nRun \`bridge --help\` to see the available commands.\n`,
+        );
+        return 1;
+    }
   }
 }
 

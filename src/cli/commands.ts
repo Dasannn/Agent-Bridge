@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { constants } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { type Adapter, type LoginProvider, loginMethod, type Registry } from "../core/adapter.js";
 import { detectHost } from "../core/host.js";
@@ -302,7 +303,12 @@ export async function logout(
   if (refusal) return refusal;
   const provider = findProvider(ctx, adapter, providerId);
   if (isResult(provider)) return provider;
-  await provider.logout(ctx.cliEnv);
+  try {
+    await provider.logout(ctx.cliEnv);
+  } catch (error) {
+    const detail = mask(error instanceof Error ? error.message : String(error));
+    return fail(`Could not sign out of ${adapter.displayName}.\n${detail}`);
+  }
   if (await provider.isAuthenticated(ctx.cliEnv)) {
     return fail(`${adapter.displayName} still reports a signed-in account.`);
   }
@@ -325,11 +331,21 @@ export async function run(
   const [binary] = adapter.binaries;
   return new Promise<number>((resolve) => {
     const child = spawn(binary, args, { env: ctx.cliEnv, stdio: "inherit" });
+    // Pass interruptions on to the CLI, and exit like a shell when it is killed.
+    const forwarded: NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGHUP"];
+    const forward = (signal: NodeJS.Signals) => child.kill(signal);
+    for (const signal of forwarded) process.on(signal, forward);
+    const done = (code: number) => {
+      for (const signal of forwarded) process.off(signal, forward);
+      resolve(code);
+    };
     child.on("error", (error) => {
       reportError(fail(`Could not run ${binary}: ${error.message}`));
-      resolve(1);
+      done(1);
     });
-    child.on("exit", (code, signal) => resolve(code ?? (signal ? 1 : 0)));
+    child.on("exit", (code, signal) =>
+      done(code ?? (signal ? 128 + (constants.signals[signal] ?? 0) : 0)),
+    );
   });
 }
 

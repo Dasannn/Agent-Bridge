@@ -111,6 +111,8 @@ async function logout(env: NodeJS.ProcessEnv): Promise<void> {
       }
       await new Promise((resolve) => setTimeout(resolve, 300));
     }
+    const screen = terminal.visible().split("\n").slice(-8).join("\n").trim();
+    throw new Error(`Antigravity did not finish signing out. Last screen:\n${screen}`);
   } finally {
     await terminal.kill();
     rmSync(cwd, { recursive: true, force: true });

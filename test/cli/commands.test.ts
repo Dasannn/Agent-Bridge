@@ -389,6 +389,11 @@ describe("run", () => {
     expect(await run("run", "node", "--", "-e", "process.exit(3)")).toBe(3);
   });
 
+  it("reports a CLI killed by a signal as 128 plus the signal number", async () => {
+    const { run } = setup();
+    expect(await run("run", "node", "--", "-e", "process.kill(process.pid, 'SIGTERM')")).toBe(143);
+  });
+
   it("uses the managed environment", async () => {
     const { env, run } = setup();
     const file = join(env.HOME as string, "path.txt");
@@ -406,5 +411,45 @@ describe("errors", () => {
     expect(await run("login", "nope")).toBe(1);
     expect(out.stderr).toContain("Unknown agent: nope");
     expect(out.stderr).toContain("fake");
+  });
+});
+
+describe("unexpected errors", () => {
+  it("reports an unknown option as JSON with --json", async () => {
+    const { out, run } = setup();
+    expect(await run("status", "--bogus", "--json")).toBe(1);
+    expect(JSON.parse(out.stderr)).toMatchObject({ ok: false });
+  });
+
+  it("reports an exception from a command instead of crashing", async () => {
+    const broken: Adapter = {
+      ...nodeAdapter,
+      id: "broken",
+      isInstalled: async () => {
+        throw new Error("disk on fire");
+      },
+    };
+    const { out, run } = setup({}, [broken]);
+    expect(await run("status")).toBe(1);
+    expect(out.stderr).toContain("disk on fire");
+  });
+
+  it("explains a failed logout with the CLI's own message", async () => {
+    const stuck: Adapter = {
+      ...nodeAdapter,
+      id: "stuck",
+      providers: [
+        {
+          ...fake.providers[0],
+          isAuthenticated: async () => true,
+          logout: async () => {
+            throw new Error("The CLI showed: Please try again later");
+          },
+        },
+      ],
+    };
+    const { out, run } = setup({}, [stuck]);
+    expect(await run("logout", "stuck")).toBe(1);
+    expect(out.stderr).toContain("Please try again later");
   });
 });
