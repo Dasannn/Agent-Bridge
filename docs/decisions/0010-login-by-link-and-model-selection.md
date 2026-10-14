@@ -48,15 +48,21 @@ configuration.
 
 ## Verification
 
-- Codex, live with the owner's ChatGPT account in portable mode:
+All live runs used the owner's ChatGPT account in portable mode.
+
+- **Codex:**
   1. The link login completed in about 3 seconds.
   2. `bridge run codex -- exec ...` read `AGENTS.md`.
-  3. `bridge logout codex` signed out.
-- OpenCode: the link prompt was captured (`test/fixtures/opencode-openai-link.txt`).
-  `run -m opencode/big-pickle --variant high` answered from `AGENTS.md`.
-- Still to verify in Phase 4:
-  - the Codex effort override on a real run;
-  - Claude Code's options from a non-Claude host.
+  3. With `-c model_reasoning_effort="high"`, Codex reported `reasoning effort: high`.
+  4. `debug models` listed the account's models with their levels.
+  5. `-m gpt-5.6-luna` with effort `low` used that model and level.
+  6. `bridge logout codex` signed out.
+- **OpenCode:**
+  1. The ChatGPT link login completed in about 2 seconds.
+  2. `run -m openai/gpt-5.5 --variant high` answered from `AGENTS.md`.
+  3. `bridge logout opencode --provider openai` signed out.
+  4. `run -m opencode/big-pickle --variant high` also worked with a free model.
+- **Still to verify:** Claude Code's options, from a non-Claude host.
 
 ## Consequences
 

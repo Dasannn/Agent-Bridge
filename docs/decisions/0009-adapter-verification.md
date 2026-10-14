@@ -18,7 +18,7 @@ installed by Agent-Bridge into `<root>/prefix`.
 |---|---|---|---|---|---|---|
 | Antigravity | official script, ~6 s | yes | yes (owner) | yes | yes | yes, read `AGENTS.md` |
 | Codex | npm | yes (device code and link) | yes (owner, by link; decision 0010) | yes | yes | yes, read `AGENTS.md` |
-| OpenCode | npm | yes (OpenAI device code and link) | not tried yet | ready without login | verified with a test key (Phase 3.5) | yes, free model |
+| OpenCode | npm | yes (OpenAI device code and link) | ChatGPT yes (owner, by link); Copilot pending (Codex Cloud) | yes | yes (ChatGPT) | yes, free and ChatGPT models |
 | Claude Code | npm | yes (Phase 3.4) | not tried: host | host | host | host |
 
 Each CLI that ran kept its configuration and credentials inside the portable
@@ -55,6 +55,6 @@ process is authenticated by the platform (decision 0006).
 
 - A container restart stops a pending login, and its code can no longer be
   used; the user must log in again. The README and skill should say so.
-- Real logins for OpenCode's ChatGPT and Copilot providers and for Claude
-  Code remain; the owner holds those subscriptions, and Copilot and Claude
-  Code are tested from Codex Cloud (decision 0010).
+- Real logins for OpenCode's Copilot provider and for Claude Code remain.
+  The owner holds those subscriptions, and both are tested from Codex Cloud
+  (decision 0010).
