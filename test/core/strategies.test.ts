@@ -28,6 +28,12 @@ describe("validateResponse", () => {
     expect(result.ok === false && result.error).toMatch(/paste/i);
   });
 
+  it("rejects a URL instead of a code", () => {
+    const result = validateResponse("paste-code", "https://x/cb?code=abc&state=d");
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.error).toMatch(/only the code/i);
+  });
+
   it("accepts anything for device-code and ignores it", () => {
     expect(validateResponse("device-code", undefined)).toEqual({ ok: true });
     expect(validateResponse("device-code", "whatever")).toEqual({ ok: true });

@@ -44,9 +44,16 @@ describe("spawnTerminal", () => {
     term.kill();
   });
 
+  it("kill stops a process that ignores hangup and termination", async () => {
+    const term = start("stubborn");
+    await term.waitFor((s) => s.includes("Paste code:"), 5000);
+    await term.kill();
+    expect(() => process.kill(term.pid, 0)).toThrow();
+  });
+
   it("kill stops the process", async () => {
     const term = start("silent");
-    term.kill();
+    await term.kill();
     await term.exited;
     expect(() => process.kill(term.pid, 0)).toThrow();
   });

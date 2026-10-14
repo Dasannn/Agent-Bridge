@@ -120,6 +120,12 @@ describe("login and complete", () => {
     expect(await run("complete", "fake", "--provider", "paste", "GOOD-CODE")).toBe(0);
   });
 
+  it("accepts a code starting with a dash after --", async () => {
+    const { run } = setup();
+    await run("login", "fake", "--provider", "paste");
+    expect(await run("complete", "fake", "--provider", "paste", "--", "-GOOD-CODE")).toBe(0);
+  });
+
   it("reports a wrong code without echoing it", async () => {
     const { out, run } = setup();
     await run("login", "fake", "--provider", "paste");
@@ -145,6 +151,15 @@ describe("login and complete", () => {
     const { out, run } = setup();
     expect(await run("login", "missing")).toBe(1);
     expect(out.stderr).toMatch(/not installed/i);
+  });
+});
+
+describe("portable home", () => {
+  it("logs in when the real home directory is unusable", async () => {
+    const { out, run } = setup({ HOME: "/nonexistent-agent-bridge-home" });
+    expect(await run("login", "fake", "--provider", "paste")).toBe(0);
+    expect(await run("complete", "fake", "--provider", "paste", "GOOD-CODE")).toBe(0);
+    expect(out.stdout).toContain("Signed in to Fake CLI");
   });
 });
 

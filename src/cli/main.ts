@@ -95,7 +95,10 @@ export async function main(
     case "login":
       return emit(await commands.login(deps, agent, values.provider));
     case "complete":
-      return emit(await commands.complete(deps, agent, values.provider, response));
+      // A code may start with "-"; it can be passed after "--".
+      return emit(
+        await commands.complete(deps, agent, values.provider, passthrough[0] ?? response),
+      );
     case "logout":
       return emit(await commands.logout(deps, agent, values.provider));
     case "run":

@@ -14,6 +14,12 @@ export interface LoginProvider {
   /** Keystrokes written in order once the CLI has drawn its first screen. */
   keys?: string[];
   strategy: StrategyId;
+  /**
+   * Turns what the user pasted into what the CLI expects, for example the
+   * code from a full callback URL. Returns undefined when the input is not
+   * acceptable. Without it, only a bare code is accepted.
+   */
+  normalizeResponse?(input: string): string | undefined;
   /** Extracts the prompt from the rendered screen text. */
   parsePrompt(screen: string): LoginPrompt | undefined;
   isAuthenticated(env: NodeJS.ProcessEnv): Promise<boolean>;

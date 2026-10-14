@@ -76,13 +76,13 @@ async function main(): Promise<void> {
     exitCode = code;
   });
 
-  const shutdown = (code = 0) => {
-    terminal.kill();
+  const shutdown = async (code = 0) => {
+    await terminal.kill();
     cleanup();
     process.exit(code);
   };
-  process.on("SIGTERM", () => shutdown(0));
-  process.on("SIGINT", () => shutdown(0));
+  process.on("SIGTERM", () => void shutdown(0));
+  process.on("SIGINT", () => void shutdown(0));
 
   const prompt = await waitForPrompt(terminal, provider);
   if (!prompt) {
@@ -91,12 +91,13 @@ async function main(): Promise<void> {
         ? "The CLI showed no login prompt in time."
         : `The CLI exited (code ${exitCode}) before showing a login prompt.`;
     report({ ok: false, error, screen: tail(terminal.screen()) });
-    shutdown(1);
+    await shutdown(1);
     return;
   }
 
   const state: SessionState = {
     pid: process.pid,
+    cliPid: terminal.pid,
     agent: config.agent,
     provider: config.provider,
     strategy: provider.strategy,
@@ -104,62 +105,113 @@ async function main(): Promise<void> {
     startedAt: new Date().toISOString(),
   };
 
-  let completing = false;
-  const idle = setTimeout(() => shutdown(0), config.idleTimeoutMs);
+  // One completion per login. Later `complete` calls (for example a retry after
+  // the agent's own timeout) wait for the same result instead of being refused.
+  let result: Promise<CompleteResult> | undefined;
+  let lingering: NodeJS.Timeout | undefined;
+  const idle = setTimeout(() => void shutdown(0), config.idleTimeoutMs);
 
   async function finishLogin(timeoutMs: number, secrets: string[]): Promise<CompleteResult> {
-    const code = await Promise.race([
-      terminal.exited,
-      new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), timeoutMs)),
-    ]);
-    if (code === undefined) {
-      return { status: "done", ok: false, message: "Timed out waiting for the CLI to finish." };
-    }
-    const authenticated = await provider.isAuthenticated(env);
-    if (code === 0 && authenticated) {
-      return { status: "done", ok: true, message: "Signed in." };
-    }
-    return {
-      status: "done",
-      ok: false,
-      message: `Login failed (exit code ${code}).\n${tail(terminal.screen(), secrets)}`,
-    };
-  }
-
-  function reply(socket: Socket, result: CompleteResult): void {
-    socket.end(`${JSON.stringify(result)}\n`);
-  }
-
-  const server = createServer((socket) => {
-    let buffer = "";
-    socket.on("data", async (chunk) => {
-      buffer += chunk.toString("utf8");
-      const newline = buffer.indexOf("\n");
-      if (newline < 0) return;
-      const request = JSON.parse(buffer.slice(0, newline)) as {
-        response?: string;
-        timeoutMs: number;
+    try {
+      const code = await Promise.race([
+        terminal.exited,
+        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), timeoutMs)),
+      ]);
+      if (code === undefined) {
+        return { status: "done", ok: false, message: "Timed out waiting for the CLI to finish." };
+      }
+      const authenticated = await provider.isAuthenticated(env);
+      if (code === 0 && authenticated) {
+        return { status: "done", ok: true, message: "Signed in." };
+      }
+      return {
+        status: "done",
+        ok: false,
+        message: `Login failed (exit code ${code}).\n${tail(terminal.screen(), secrets)}`,
       };
-      if (completing) {
-        reply(socket, { status: "rejected", error: "A completion is already in progress." });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return { status: "done", ok: false, message: mask(`Login check failed: ${reason}`, secrets) };
+    }
+  }
+
+  const connected = (socket: Socket) => !socket.destroyed && socket.writable;
+
+  function reply(socket: Socket, message: CompleteResult): void {
+    if (connected(socket)) socket.end(`${JSON.stringify(message)}\n`);
+  }
+
+  function parseRequest(line: string): { response?: string; timeoutMs: number } | undefined {
+    try {
+      const request = JSON.parse(line) as { response?: unknown; timeoutMs?: unknown };
+      return {
+        response: typeof request.response === "string" ? request.response : undefined,
+        timeoutMs: typeof request.timeoutMs === "number" ? request.timeoutMs : 120_000,
+      };
+    } catch {
+      return undefined;
+    }
+  }
+
+  async function handle(socket: Socket, line: string): Promise<void> {
+    if (!result) {
+      const request = parseRequest(line);
+      if (!request) {
+        reply(socket, { status: "rejected", error: "Malformed request." });
         return;
       }
-      const validation = validateResponse(provider.strategy, request.response);
+      let input = request.response;
+      if (input !== undefined && provider.normalizeResponse) {
+        input = provider.normalizeResponse(input.trim());
+        if (input === undefined) {
+          reply(socket, {
+            status: "rejected",
+            error:
+              "That is not something this login accepts. Paste only the code shown in the browser.",
+          });
+          return;
+        }
+      }
+      const validation = validateResponse(provider.strategy, input);
       if (!validation.ok) {
         reply(socket, { status: "rejected", error: validation.error });
         return;
       }
-      completing = true;
       clearTimeout(idle);
-      if (validation.value !== undefined) terminal.write(`${validation.value}\r`);
-      const result = await finishLogin(
-        request.timeoutMs,
-        validation.value ? [validation.value] : [],
+      const secrets = [request.response?.trim(), validation.value].filter(
+        (secret): secret is string => Boolean(secret),
       );
-      reply(socket, result);
-      server.close();
-      shutdown(0);
+      if (validation.value !== undefined) terminal.write(`${validation.value}\r`);
+      result = finishLogin(request.timeoutMs, secrets);
+    }
+    const outcome = await result;
+    if (connected(socket)) {
+      // The session is over once someone receives the result: remove it first,
+      // so the caller never sees a finished login as still in progress.
+      cleanup();
+      reply(socket, outcome);
+      setTimeout(() => void shutdown(0), 200);
+    } else if (!lingering) {
+      // Nobody was listening: keep the result for a later `complete`.
+      lingering = setTimeout(() => void shutdown(0), config.idleTimeoutMs);
+    }
+  }
+
+  const server = createServer((socket) => {
+    let buffer = "";
+    socket.on("error", () => {});
+    socket.on("data", (chunk) => {
+      buffer += chunk.toString("utf8");
+      const newline = buffer.indexOf("\n");
+      if (newline < 0) return;
+      const line = buffer.slice(0, newline);
+      buffer = "";
+      void handle(socket, line);
     });
+  });
+  server.on("error", (error) => {
+    report({ ok: false, error: `Could not open the login session: ${error.message}` });
+    void shutdown(1);
   });
 
   rmSync(paths.socket, { force: true });

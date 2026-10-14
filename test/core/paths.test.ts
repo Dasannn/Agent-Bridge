@@ -36,6 +36,20 @@ describe("resolveHome", () => {
     });
   });
 
+  it("creates the redirected home directories in portable mode", () => {
+    const root = join(temp(), "bridge");
+    resolveHome({ AGENT_BRIDGE_HOME: root, HOME: temp() }, readOnly);
+    for (const dir of [
+      "home",
+      "home/.config",
+      "home/.local/share",
+      "home/.cache",
+      "home/.claude",
+    ]) {
+      expect(statSync(join(root, dir)).isDirectory()).toBe(true);
+    }
+  });
+
   it("creates root with mode 0700", () => {
     const root = join(temp(), "bridge");
     resolveHome({ AGENT_BRIDGE_HOME: root, HOME: temp() }, writable);

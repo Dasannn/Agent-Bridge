@@ -5,9 +5,12 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Adapter, LoginPrompt, LoginProvider, StrategyId } from "./adapter.js";
 import { type BridgeHome, sessionPaths } from "./paths.js";
+import { signalGroup } from "./terminal.js";
 
 export interface SessionState {
   pid: number;
+  /** Process (group) of the CLI the runner drives. */
+  cliPid: number;
   agent: string;
   provider: string;
   strategy: StrategyId;
@@ -102,6 +105,8 @@ export async function cancelLogin(
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
     if (isAlive(state.pid)) process.kill(state.pid, "SIGKILL");
+    // The runner stops its CLI on SIGTERM; make sure it is gone if the runner was killed.
+    if (typeof state.cliPid === "number") signalGroup(state.cliPid, "SIGKILL");
   }
   removeSession(home, agent, provider);
 }
@@ -196,5 +201,13 @@ export async function completeLogin(args: {
       if (newline >= 0) finish(JSON.parse(buffer.slice(0, newline)) as CompleteResult);
     });
     socket.on("error", () => finish({ status: "no-session" }));
+    socket.on("close", () =>
+      finish({
+        status: "done",
+        ok: false,
+        message:
+          "The login process ended before reporting a result. Start again with `bridge login`.",
+      }),
+    );
   });
 }

@@ -1,4 +1,5 @@
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -41,6 +42,20 @@ async function start(id: string, promptTimeoutMs = 10_000) {
   });
   return { home, env, result };
 }
+
+const isAlive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const state = (home: BridgeHome, id: string) =>
+  JSON.parse(readFileSync(sessionPaths(home, "fake", id).state, "utf8")) as {
+    pid: number;
+    cliPid: number;
+  };
 
 const complete = (home: BridgeHome, id: string, response?: string) =>
   completeLogin({ agent: "fake", provider: id, home, response, timeoutMs: 10_000 });
@@ -90,6 +105,54 @@ describe("session runner", () => {
     expect(done.status === "done" && done.message).toContain("Denied");
   });
 
+  it("returns quickly when the runner dies during completion", async () => {
+    const { home } = await start("slow");
+    const runnerPid = state(home, "slow").pid;
+    setTimeout(() => process.kill(runnerPid, "SIGKILL"), 300);
+    const began = Date.now();
+    const done = await complete(home, "slow");
+    expect(Date.now() - began).toBeLessThan(4000);
+    expect(done).toMatchObject({ status: "done", ok: false });
+    expect(done.status === "done" && done.message).toContain("bridge login");
+  });
+
+  it("a retried complete gets the result of an abandoned one", async () => {
+    const { home } = await start("device");
+    const socket = createConnection(sessionPaths(home, "fake", "device").socket);
+    await new Promise<void>((resolve) => socket.on("connect", () => resolve()));
+    socket.write(`${JSON.stringify({ type: "complete", timeoutMs: 10_000 })}\n`);
+    socket.destroy();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await complete(home, "device")).toMatchObject({ status: "done", ok: true });
+  });
+
+  it("cancelLogin stops a CLI that ignores signals", async () => {
+    const { home } = await start("stubborn");
+    const { pid, cliPid } = state(home, "stubborn");
+    expect(typeof cliPid).toBe("number");
+    await cancelLogin("fake", "stubborn", home);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(isAlive(pid)).toBe(false);
+    expect(isAlive(cliPid)).toBe(false);
+  });
+
+  it("accepts a callback URL only through the provider's normalizer", async () => {
+    const { home } = await start("paste-url");
+    const done = await complete(
+      home,
+      "paste-url",
+      "https://example.test/cb?code=GOOD-CODE&state=s1",
+    );
+    expect(done).toMatchObject({ status: "done", ok: true });
+  });
+
+  it("rejects a callback URL for providers without a normalizer", async () => {
+    const { home } = await start("paste");
+    expect(await complete(home, "paste", "https://example.test/cb?code=GOOD-CODE")).toMatchObject({
+      status: "rejected",
+    });
+  });
+
   it("silent CLI times out with its raw screen", async () => {
     const { home, result } = await start("silent", 500);
     expect(result.ok).toBe(false);
@@ -104,7 +167,8 @@ describe("session runner", () => {
 
   it("a second startLogin stops the first runner", async () => {
     const { home, env } = await start("paste");
-    const first = JSON.parse(readFileSync(sessionPaths(home, "fake", "paste").state, "utf8"));
+    const first = state(home, "paste");
+    expect(typeof first.cliPid).toBe("number");
     const again = await startLogin({
       adapter: fake,
       provider: provider("paste"),
@@ -114,7 +178,9 @@ describe("session runner", () => {
       adapterModule,
     });
     expect(again.ok).toBe(true);
-    expect(() => process.kill(first.pid, 0)).toThrow();
+    expect(isAlive(first.pid)).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(isAlive(first.cliPid)).toBe(false);
     expect(await complete(home, "paste", "GOOD-CODE")).toMatchObject({ status: "done", ok: true });
   });
 

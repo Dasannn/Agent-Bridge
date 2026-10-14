@@ -40,7 +40,7 @@ async function pasteCode() {
   const code = line.split(/[\r\n]/)[0].trim();
   // Echo the typed code, as interactive CLIs do.
   process.stdout.write(code);
-  if (code === "GOOD-CODE") {
+  if (code === "GOOD-CODE" || code === "-GOOD-CODE") {
     saveAuth();
     process.stdout.write("\r\nSigned in\r\n");
     process.exit(0);
@@ -67,6 +67,13 @@ switch (mode) {
     break;
   case "device-code":
     await deviceCode();
+    break;
+  case "stubborn":
+    // Ignores the signals a terminal hangup or polite stop would send.
+    process.on("SIGHUP", () => {});
+    process.on("SIGTERM", () => {});
+    process.stdout.write("Open https://example.test/auth?state=s9\r\nPaste code: ");
+    setInterval(() => {}, 1000);
     break;
   case "silent":
     setInterval(() => {}, 1000);

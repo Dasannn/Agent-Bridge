@@ -31,22 +31,31 @@ export function resolveHome(
   } else {
     root = join(env.TMPDIR || tmpdir(), "agent-bridge");
   }
+  const home: BridgeHome = { root, portable: !homeWritable };
   mkdirSync(root, { recursive: true, mode: 0o700 });
-  return { root, portable: !homeWritable };
+  if (home.portable) {
+    for (const dir of Object.values(portableDirs(root))) {
+      mkdirSync(dir, { recursive: true, mode: 0o700 });
+    }
+  }
+  return home;
+}
+
+function portableDirs(root: string) {
+  const home = join(root, "home");
+  return {
+    HOME: home,
+    XDG_CONFIG_HOME: join(home, ".config"),
+    XDG_DATA_HOME: join(home, ".local", "share"),
+    XDG_CACHE_HOME: join(home, ".cache"),
+    CLAUDE_CONFIG_DIR: join(home, ".claude"),
+  };
 }
 
 export function managedEnv(env: NodeJS.ProcessEnv, home: BridgeHome): NodeJS.ProcessEnv {
   const bin = join(home.root, "prefix", "bin");
   const result: NodeJS.ProcessEnv = { ...env, PATH: env.PATH ? `${bin}:${env.PATH}` : bin };
-  if (home.portable) {
-    const fakeHome = join(home.root, "home");
-    result.HOME = fakeHome;
-    result.XDG_CONFIG_HOME = join(fakeHome, ".config");
-    result.XDG_DATA_HOME = join(fakeHome, ".local", "share");
-    result.XDG_CACHE_HOME = join(fakeHome, ".cache");
-    result.CLAUDE_CONFIG_DIR = join(fakeHome, ".claude");
-  }
-  return result;
+  return home.portable ? { ...result, ...portableDirs(home.root) } : result;
 }
 
 export function sessionPaths(

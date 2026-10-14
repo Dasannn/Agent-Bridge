@@ -9,7 +9,8 @@ export interface Terminal {
   waitFor(predicate: (screen: string) => boolean, timeoutMs: number): Promise<boolean>;
   /** Resolves with the exit code once the process has exited and its output is rendered. */
   exited: Promise<number>;
-  kill(): void;
+  /** Stops the process group: SIGTERM, then SIGKILL after a grace period. */
+  kill(): Promise<void>;
 }
 
 export interface TerminalOptions {
@@ -20,6 +21,20 @@ export interface TerminalOptions {
 }
 
 const POLL_MS = 50;
+const KILL_GRACE_MS = 1000;
+
+/** Signals a process group (node-pty children lead their own), falling back to the process. */
+export function signalGroup(pid: number, signal: NodeJS.Signals): void {
+  try {
+    process.kill(-pid, signal);
+  } catch {
+    try {
+      process.kill(pid, signal);
+    } catch {
+      // Already gone.
+    }
+  }
+}
 
 export function spawnTerminal(command: string, args: string[], options: TerminalOptions): Terminal {
   const cols = options.cols ?? 120;
@@ -86,11 +101,20 @@ export function spawnTerminal(command: string, args: string[], options: Terminal
     write: (data) => child.write(data),
     waitFor,
     exited,
-    kill: () => {
-      try {
-        child.kill();
-      } catch {
-        // Already exited.
+    kill: async () => {
+      let done = false;
+      exited.then(() => {
+        done = true;
+      });
+      signalGroup(child.pid, "SIGTERM");
+      const deadline = Date.now() + KILL_GRACE_MS;
+      while (!done && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+      }
+      if (!done) {
+        signalGroup(child.pid, "SIGKILL");
+        // Wait until node-pty has reaped it, so it does not linger as a zombie.
+        await Promise.race([exited, new Promise((resolve) => setTimeout(resolve, KILL_GRACE_MS))]);
       }
     },
   };

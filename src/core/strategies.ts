@@ -14,6 +14,9 @@ export function validateResponse(
   if (!value) {
     return { ok: false, error: "Paste the code shown in the browser after signing in." };
   }
+  if (value.includes("://")) {
+    return { ok: false, error: "That looks like a URL. Paste only the code shown in the browser." };
+  }
   if (/\s/.test(value)) {
     return { ok: false, error: "The code must not contain spaces. Paste only the code." };
   }

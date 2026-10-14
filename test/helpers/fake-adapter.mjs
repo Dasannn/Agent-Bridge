@@ -42,6 +42,22 @@ export const adapters = [
       provider("paste", "paste-code", "paste-code", pastePrompt),
       provider("device", "device-code", "device-code", devicePrompt),
       provider("silent", "silent", "paste-code", pastePrompt),
+      provider("stubborn", "stubborn", "paste-code", pastePrompt),
+      provider("slow", "device-code", "device-code", devicePrompt, [
+        "/usr/bin/env",
+        "FAKE_DEVICE_MS=5000",
+      ]),
+      {
+        ...provider("paste-url", "paste-code", "paste-code", pastePrompt),
+        normalizeResponse: (input) => {
+          if (!input.includes("://")) return input;
+          try {
+            return new URL(input).searchParams.get("code") ?? undefined;
+          } catch {
+            return undefined;
+          }
+        },
+      },
       provider("denied", "device-code", "device-code", devicePrompt, [
         "/usr/bin/env",
         "FAKE_FAIL=1",
