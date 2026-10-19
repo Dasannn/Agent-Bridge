@@ -318,6 +318,9 @@ export async function logout(
 }
 
 const POST_EXIT_READ_MS = 250;
+// After the CLI exits, reading no longer waits for the terminal, so output it
+// left in the pipe is captured within the window; this bounds that memory.
+const POST_EXIT_READ_BYTES = 16 * 1024 * 1024;
 
 export async function run(
   deps: Deps,
@@ -342,16 +345,22 @@ export async function run(
     let observer: ReturnType<typeof runObserver> | undefined;
     let outputDone = Promise.resolve();
     let stopReading: (() => void) | undefined;
+    let drainAfterExit: (() => void) | undefined;
     child.on("spawn", () => {
       if (!events || child.pid === undefined || !child.stdout) return;
       observer = runObserver(events, adapter.id, child.pid, args);
       const stdout = child.stdout;
       outputDone = new Promise<void>((resolveOutput) => {
         let stopped = false;
+        let exited = false;
+        let afterExit = 0;
         const resume = () => stdout.resume();
         const tee = (chunk: Buffer) => {
-          if (!process.stdout.write(chunk)) stdout.pause();
+          if (!process.stdout.write(chunk) && !exited) stdout.pause();
           observer?.write(chunk);
+          if (!exited) return;
+          afterExit += chunk.length;
+          if (afterExit >= POST_EXIT_READ_BYTES) stop();
         };
         const stop = () => {
           if (stopped) return;
@@ -377,6 +386,10 @@ export async function run(
           else resolveOutput();
         };
         stopReading = stop;
+        drainAfterExit = () => {
+          exited = true;
+          if (!stopped) stdout.resume();
+        };
         process.stdout.on("drain", resume);
         stdout.on("data", tee);
         stdout.once("end", stop);
@@ -405,6 +418,7 @@ export async function run(
       if (!observer || !child.stdout) return done(result);
       // One fixed cutoff for new reads, independent of incoming data and
       // output backpressure. Only captured stdout can delay completion after it.
+      drainAfterExit?.();
       const deadline = setTimeout(() => stopReading?.(), POST_EXIT_READ_MS);
       void outputDone.then(() => {
         clearTimeout(deadline);
