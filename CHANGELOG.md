@@ -7,6 +7,8 @@ This file follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Opt-in loopback run observer via `AGENT_BRIDGE_EVENTS`, reporting start,
+  batched stdout lines, and exit without changing terminal output.
 - `SECURITY.md`, issue forms (including one for a CLI whose login changed),
   and a troubleshooting guide.
 

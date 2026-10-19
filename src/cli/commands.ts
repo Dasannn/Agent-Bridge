@@ -9,6 +9,7 @@ import { type BridgeHome, managedEnv, resolveHome } from "../core/paths.js";
 import { completeLogin, loginInProgress, loginPending, startLogin } from "../core/session.js";
 import { isAgentBridgeSkill, readSkill } from "../core/skill.js";
 import { callbackTarget } from "../core/strategies.js";
+import { observerUrl, runObserver } from "./run-observer.js";
 
 export interface Deps {
   env: NodeJS.ProcessEnv;
@@ -316,6 +317,11 @@ export async function logout(
   return { ok: true, message: `Signed out of ${adapter.displayName}.` };
 }
 
+const POST_EXIT_READ_MS = 250;
+// After the CLI exits, reading no longer waits for the terminal, so output it
+// left in the pipe is captured within the window; this bounds that memory.
+const POST_EXIT_READ_BYTES = 16 * 1024 * 1024;
+
 export async function run(
   deps: Deps,
   agent: string | undefined,
@@ -330,23 +336,96 @@ export async function run(
     return 1;
   }
   const [binary] = adapter.binaries;
+  const events = observerUrl(deps.env.AGENT_BRIDGE_EVENTS);
   return new Promise<number>((resolve) => {
-    const child = spawn(binary, args, { env: ctx.cliEnv, stdio: "inherit" });
+    const child = spawn(binary, args, {
+      env: ctx.cliEnv,
+      stdio: events ? ["inherit", "pipe", "inherit"] : "inherit",
+    });
+    let observer: ReturnType<typeof runObserver> | undefined;
+    let outputDone = Promise.resolve();
+    let stopReading: (() => void) | undefined;
+    let drainAfterExit: (() => void) | undefined;
+    child.on("spawn", () => {
+      if (!events || child.pid === undefined || !child.stdout) return;
+      observer = runObserver(events, adapter.id, child.pid, args);
+      const stdout = child.stdout;
+      outputDone = new Promise<void>((resolveOutput) => {
+        let stopped = false;
+        let exited = false;
+        let afterExit = 0;
+        const resume = () => stdout.resume();
+        const tee = (chunk: Buffer) => {
+          if (!process.stdout.write(chunk) && !exited) stdout.pause();
+          observer?.write(chunk);
+          if (!exited) return;
+          afterExit += chunk.length;
+          if (afterExit >= POST_EXIT_READ_BYTES) stop();
+        };
+        const stop = () => {
+          if (stopped) return;
+          stopped = true;
+          stdout.pause();
+          stdout.off("data", tee);
+          stdout.off("end", stop);
+          stdout.off("close", stop);
+          process.stdout.off("drain", resume);
+          // Include bytes Node has already read into its buffer, without
+          // accepting any more data from the pipe after the cutoff.
+          const captured: Buffer | null = stdout.readableLength
+            ? stdout.read(stdout.readableLength)
+            : null;
+          // Descendants may still own the write end. Release our read end,
+          // but let every byte already written to process.stdout drain fully.
+          stdout.destroy();
+          if (captured) {
+            process.stdout.write(captured);
+            observer?.write(captured);
+          }
+          if (process.stdout.writableNeedDrain) process.stdout.once("drain", resolveOutput);
+          else resolveOutput();
+        };
+        stopReading = stop;
+        drainAfterExit = () => {
+          exited = true;
+          if (!stopped) stdout.resume();
+        };
+        process.stdout.on("drain", resume);
+        stdout.on("data", tee);
+        stdout.once("end", stop);
+        stdout.once("close", stop);
+      });
+    });
     // Pass interruptions on to the CLI, and exit like a shell when it is killed.
     const forwarded: NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGHUP"];
     const forward = (signal: NodeJS.Signals) => child.kill(signal);
     for (const signal of forwarded) process.on(signal, forward);
-    const done = (code: number) => {
+    const cleanup = () => {
       for (const signal of forwarded) process.off(signal, forward);
+    };
+    const done = (code: number) => {
+      cleanup();
       resolve(code);
     };
     child.on("error", (error) => {
       reportError(fail(`Could not run ${binary}: ${error.message}`));
       done(1);
     });
-    child.on("exit", (code, signal) =>
-      done(code ?? (signal ? 128 + (constants.signals[signal] ?? 0) : 0)),
-    );
+    child.on("exit", (code: number | null, signal: NodeJS.Signals | null) => {
+      const exitAt = Date.now();
+      cleanup();
+      const result = code ?? (signal ? 128 + (constants.signals[signal] ?? 0) : 0);
+      if (!observer || !child.stdout) return done(result);
+      // One fixed cutoff for new reads, independent of incoming data and
+      // output backpressure. Only captured stdout can delay completion after it.
+      drainAfterExit?.();
+      const deadline = setTimeout(() => stopReading?.(), POST_EXIT_READ_MS);
+      void outputDone.then(() => {
+        clearTimeout(deadline);
+        observer?.finish(code, signal, exitAt);
+        done(result);
+      });
+    });
   });
 }
 

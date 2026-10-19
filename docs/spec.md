@@ -171,6 +171,23 @@ given arguments in the environment Agent-Bridge manages (portable home and
 and refuses the host agent. The skill uses `bridge run` for every delegation,
 so one skill works in every environment.
 
+### FR-5b Run observer (opt-in)
+
+When the environment variable `AGENT_BRIDGE_EVENTS` holds an
+`http://127.0.0.1:<port>/<path>` address, `bridge run` also reports the run
+to that local observer (for example AgentStation's collector):
+
+- `start` — agent id, child pid, arguments, timestamp;
+- `lines` — the child's standard output lines, in batches;
+- `exit` — exit code or signal, timestamp.
+
+Standard output is still written to the terminal unchanged and in order;
+standard input and error, the exit code, and signal handling are unchanged.
+Reporting is fire-and-forget: at most 1 s per request, never throws, never
+delays or changes the run, and stops silently if the observer is down.
+Only loopback addresses are accepted. Without the variable, `bridge run`
+behaves exactly as in FR-5a.
+
 ### FR-6 Skill
 
 Agent-Bridge ships one skill, `SKILL.md`, usable by Claude Code and Codex. It
