@@ -131,6 +131,30 @@ configuration.
 
 For common problems, see [Troubleshooting](docs/guides/troubleshooting.md).
 
+## Run observer (optional)
+
+To report delegated runs to a local HTTP observer, set `AGENT_BRIDGE_EVENTS`:
+
+```bash
+AGENT_BRIDGE_EVENTS=http://127.0.0.1:4318/events bridge run codex -- exec "<task>"
+```
+
+Only HTTP URLs on `127.0.0.1`, `::1`, or `localhost` are accepted; other
+addresses are silently ignored. The observer receives JSON POSTs: `start`
+with `agent`, `pid`, `args`, and `ts`; `lines` with `pid` and a `lines` array;
+and `exit` with `pid`, `code`, `signal`, and `ts` (ISO timestamps). Lines are
+batched every 250 ms or 100 lines, with any trailing partial line sent at exit.
+Raw stdout and arguments are shared with the local observer.
+
+Stdout still reaches the terminal unchanged, but the CLI sees a pipe, which
+may affect TTY-dependent formatting. Stdin, stderr, exit codes, and signal
+forwarding are unchanged. Reporting stops silently if the observer fails;
+requests time out after one second without holding the process open, including
+the final best-effort flush. After the target exits, stdout is read for at most
+250 ms, then the pipe is released even if descendants keep writing. Bytes
+already read finish draining to stdout under backpressure. Without the
+variable, stdio remains inherited as usual.
+
 ## Limits
 
 - **Logins last as long as the cloud session's container.** A new session

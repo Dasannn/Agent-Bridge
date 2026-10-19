@@ -502,7 +502,7 @@ Goal: make the project easier to find, support, and release.
 
 ### Task 8.1: Opt-in run observer
 
-- [ ] Implement FR-5b in `src/cli/commands.ts` behind `AGENT_BRIDGE_EVENTS`
+- [x] Implement FR-5b in `src/cli/commands.ts` behind `AGENT_BRIDGE_EVENTS`
       (loopback only): tee stdout, POST `start`, batched `lines`, `exit`
       with a 1 s timeout, never throwing; unchanged behaviour without the
       variable. Tests with a fake CLI and a fake observer, including
