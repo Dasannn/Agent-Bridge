@@ -497,3 +497,14 @@ Goal: make the project easier to find, support, and release.
 
 - [x] Confirm that a committed repository skill loads at the start of a new
       Codex Cloud task and can connect Antigravity on request (decision 0014).
+
+## Phase 8 — Run observer
+
+### Task 8.1: Opt-in run observer
+
+- [ ] Implement FR-5b in `src/cli/commands.ts` behind `AGENT_BRIDGE_EVENTS`
+      (loopback only): tee stdout, POST `start`, batched `lines`, `exit`
+      with a 1 s timeout, never throwing; unchanged behaviour without the
+      variable. Tests with a fake CLI and a fake observer, including
+      observer down and non-loopback address. README section and
+      CHANGELOG entry (decision 0015).
