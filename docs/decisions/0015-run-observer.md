@@ -1,6 +1,6 @@
 # 0015: Opt-in Run Observer
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-19
 
 ## Context
